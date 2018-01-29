@@ -21,9 +21,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
+    ListView scanListView;
+    TextView scanNumView;
+
     WifiManager wifi;
     Receiver wifiReceiver;
     List<ScanResult> wifiResults;
+    ArrayAdapter<String> adapter;
     private final Handler scanHandler = new Handler();
     static final int LOCATION_PERMISSION_REQUEST = 1;
     Integer scanDelay = 1000;
@@ -32,6 +36,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        scanListView = (ListView) findViewById(R.id.scanListView);
+        scanNumView = (TextView) findViewById(R.id.scanNumView);
+        scanNumView.setTextSize(24);
+        adapter = null;
 
         wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         if (!wifi.isWifiEnabled())
@@ -97,20 +106,25 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
 
             ArrayList<String> listSSID = new ArrayList<String>();
-            ListView listView = (ListView) findViewById(R.id.listView);
-            ArrayAdapter<String> adapter;
 
             //Get available wifi
             wifiResults = wifi.getScanResults();
 
-            TextView text = (TextView) findViewById(R.id.textView);
-
             for (int i = 0; i < wifiResults.size(); i++)
                listSSID.add(wifiResults.get(i).SSID);
-            text.setText(Integer.toString(listSSID.size()));
 
-            adapter = new ArrayAdapter<String>(context, android.R.layout.simple_list_item_1, listSSID);
-            listView.setAdapter(adapter);
+            int scanNum = listSSID.size();
+            String scanNumStr = scanNum > 0 ? Integer.toString(scanNum) : "Aucun";
+            scanNumView.setText(scanNumStr + (scanNum > 1 ? " réseaux trouvés" : " réseau trouvé"));
+
+            if(scanListView.getAdapter() == null) {
+                adapter = new ArrayAdapter<String>(context, android.R.layout.simple_list_item_1, listSSID);
+                scanListView.setAdapter(adapter);
+            } else {
+                int scanListPos = scanListView.getFirstVisiblePosition();
+                adapter.notifyDataSetChanged();
+                scanListView.setVerticalScrollbarPosition(scanListPos);
+            }
         }
     }
 }
