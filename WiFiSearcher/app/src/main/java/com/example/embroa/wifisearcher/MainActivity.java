@@ -3,6 +3,7 @@ package com.example.embroa.wifisearcher;
 import android.content.Context;
 import android.net.wifi.ScanResult;
 import android.os.Handler;
+import android.support.v4.app.FragmentActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.net.wifi.WifiManager;
@@ -17,12 +18,22 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.widget.TextView;
 
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
+
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     WifiManager wifi;
     Receiver wifiReceiver;
+    Map gMap;
+
     List<ScanResult> wifiResults;
     private final Handler scanHandler = new Handler();
     static final int LOCATION_PERMISSION_REQUEST = 1;
@@ -37,6 +48,10 @@ public class MainActivity extends AppCompatActivity {
         if (!wifi.isWifiEnabled())
             wifi.setWifiEnabled(true);
 
+        //Create a map object
+        gMap = new Map();
+
+        //Create a receiver object
         wifiReceiver = new Receiver();
         registerReceiver(wifiReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
 
@@ -93,6 +108,7 @@ public class MainActivity extends AppCompatActivity {
         scanWifi();
     }
 
+    // Receiver class //////////////////////////////////////////////////////////////////////////////
     class Receiver extends BroadcastReceiver {
         public void onReceive(Context context, Intent intent) {
 
@@ -113,4 +129,25 @@ public class MainActivity extends AppCompatActivity {
             listView.setAdapter(adapter);
         }
     }
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    //NOTE : Its the basic code from tutorials
+    // Google map class ////////////////////////////////////////////////////////////////////////////
+    class Map extends FragmentActivity implements OnMapReadyCallback {
+        @Override
+        public void onCreate(Bundle savedInstanceState) {
+            super.onCreate(savedInstanceState);
+            setContentView(R.layout.activity_main);
+
+            MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.map);
+            mapFragment.getMapAsync(this);
+        }
+
+        @Override //TODO : The marker is not showing...
+        public void onMapReady(GoogleMap map) {
+            map.addMarker(new MarkerOptions().position(new LatLng(0, 0)).title("Marker").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+        }
+    }
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
 }
