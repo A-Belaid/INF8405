@@ -1,22 +1,36 @@
 package com.example.embroa.wifisearcher;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.net.wifi.ScanResult;
+import android.os.Build;
 import android.os.Handler;
 import android.support.v4.app.FragmentActivity;
+
+import android.support.annotation.RequiresApi;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.net.wifi.WifiManager;
 import android.content.BroadcastReceiver;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.text.Html;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.app.ActivityCompat;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.androidfung.geoip.IpApiService;
+import com.androidfung.geoip.ServicesManager;
+import com.androidfung.geoip.model.GeoIpResponseModel;
 
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.GoogleMap;
@@ -29,19 +43,25 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import java.util.ArrayList;
 import java.util.List;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+
 public class MainActivity extends AppCompatActivity {
     ListView scanListView;
     TextView scanNumView;
+    Button conDetailsBtn;
 
     WifiManager wifi;
     Receiver wifiReceiver;
     Map gMap;
 
     List<ScanResult> wifiResults;
+    ArrayList<String> listSSID;
     ArrayAdapter<String> adapter;
     private final Handler scanHandler = new Handler();
     static final int LOCATION_PERMISSION_REQUEST = 1;
     Integer scanDelay = 1000;
+    GeoData geoData;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,7 +71,19 @@ public class MainActivity extends AppCompatActivity {
         scanListView = (ListView) findViewById(R.id.scanListView);
         scanNumView = (TextView) findViewById(R.id.scanNumView);
         scanNumView.setTextSize(24);
+        conDetailsBtn = (Button) findViewById(R.id.conDetailsBtn);
+        conDetailsBtn.setEnabled(false);
+
+        listSSID = new ArrayList<String>();
         adapter = null;
+
+        scanListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position,
+                                    long id) {
+                displayOneScan(position);
+            }
+        });
 
         wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         if (!wifi.isWifiEnabled())
@@ -69,7 +101,13 @@ public class MainActivity extends AppCompatActivity {
         if(permissionCheck != PackageManager.PERMISSION_GRANTED) //Ask for permission if not granted
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, LOCATION_PERMISSION_REQUEST);
         else //Scan for wifi otherwise
+        {
+            geoData = new GeoData();
+            setGeoData();
+            conDetailsBtn.setEnabled(true);
+
             scanWifi();
+        }
     }
 
     //Check the request result
@@ -117,17 +155,67 @@ public class MainActivity extends AppCompatActivity {
         scanWifi();
     }
 
+    //Displays an alert containing (for now) the capabilities of a selected scanned network
+    //Capabilities: "Describes the authentication, key management, and encryption schemes supported by the access point."
+    public void displayOneScan(int position){
+        String alertTitle = listSSID.get(position);
+        String alertMessage = wifiResults.get(position).capabilities;
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(alertTitle).setMessage(alertMessage).setPositiveButton("OK", null);
+        builder.create().show();
+    }
+
+    //Displays an alert containing (for now) the geolocation of the current connection
+    @TargetApi(Build.VERSION_CODES.N)
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    public void displayCurrentConDetails(View view) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Détails sur la connexion en cours")
+                .setMessage(Html.fromHtml("<b>Country: </b>" + geoData.getCountry() + " (" + geoData.getCountryCode() +  ")" + "<br/>" +
+                        "<b>City: </b>" + geoData.getCity() + ", " + geoData.getRegion() + "<br/>" +
+                        "<b>Latitude: </b>" + geoData.getLatitudeStr() + "°<br/>" +
+                        "<b>Longitude: </b>" + geoData.getLongitudeStr() + "°<br/>" +
+                        "<b>Fuseau horaire: </b>" + geoData.getTimezone() + "<br/>" +
+                        "<b>ISP: </b>" + geoData.getISP(), Html.FROM_HTML_MODE_LEGACY))
+                .setPositiveButton("OK", null);
+        builder.create().show();
+    }
+
+    //Saves tne current connection's geolocation, based on its IP
+    public void setGeoData() {
+        final MainActivity thisActivity = this;
+
+        IpApiService ipApiService = ServicesManager.getGeoIpService();
+        ipApiService.getGeoIp().enqueue(new Callback<GeoIpResponseModel>() {
+            @Override
+            public void onResponse(Call<GeoIpResponseModel> call, retrofit2.Response<GeoIpResponseModel> response) {
+                thisActivity.geoData.setCountry(response.body().getCountry());
+                thisActivity.geoData.setCity(response.body().getCity());
+                thisActivity.geoData.setCountryCode(response.body().getCountryCode());
+                thisActivity.geoData.setLatitude(response.body().getLatitude());
+                thisActivity.geoData.setLongitude(response.body().getLongitude());
+                thisActivity.geoData.setRegion(response.body().getRegion());
+                thisActivity.geoData.setTimezone(response.body().getTimezone());
+                thisActivity.geoData.setIsp(response.body().getIsp());
+            }
+
+            @Override
+            public void onFailure(Call<GeoIpResponseModel> call, Throwable t) {
+                Toast.makeText(getApplicationContext(), t.toString(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
     // Receiver class //////////////////////////////////////////////////////////////////////////////
     class Receiver extends BroadcastReceiver {
         public void onReceive(Context context, Intent intent) {
-
-            ArrayList<String> listSSID = new ArrayList<String>();
+            listSSID.clear();
 
             //Get available wifi
             wifiResults = wifi.getScanResults();
 
             for (int i = 0; i < wifiResults.size(); i++)
-               listSSID.add(wifiResults.get(i).SSID);
+                listSSID.add(wifiResults.get(i).SSID);
 
             int scanNum = listSSID.size();
             String scanNumStr = scanNum > 0 ? Integer.toString(scanNum) : "Aucun";
@@ -163,5 +251,4 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     ////////////////////////////////////////////////////////////////////////////////////////////////
-
 }

@@ -36,7 +36,18 @@
         android:layout_height="match_parent"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
+        android:layout_below="@+id/conDetailsBtn"
+        android:layout_marginTop="12dp" />
+
+    <Button
+        android:id="@+id/conDetailsBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_below="@+id/map"
-        android:layout_marginTop="14dp" />
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="13dp"
+        android:onClick="displayCurrentConDetails"
+        android:text="Détails sur la connexion en cours"
+        tools:clickable="false" />
 
 </RelativeLayout>
