@@ -169,14 +169,18 @@ public class MainActivity extends AppCompatActivity {
     @TargetApi(Build.VERSION_CODES.N)
     @RequiresApi(api = Build.VERSION_CODES.N)
     public void displayCurrentConDetails(View view) {
+        String alertMessage = "<b>Country: </b>" + geoData.getCountry() + " (" + geoData.getCountryCode() +  ")" + "<br/>" +
+                "<b>City: </b>" + geoData.getCity() + ", " + geoData.getRegion() + "<br/>" +
+                "<b>Latitude: </b>" + geoData.getLatitudeStr() + "°<br/>" +
+                "<b>Longitude: </b>" + geoData.getLongitudeStr() + "°<br/>" +
+                "<b>Fuseau horaire: </b>" + geoData.getTimezone() + "<br/>" +
+                "<b>ISP: </b>" + geoData.getISP();
+        boolean isRecentOs = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N;
+
+
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Détails sur la connexion en cours")
-                .setMessage(Html.fromHtml("<b>Country: </b>" + geoData.getCountry() + " (" + geoData.getCountryCode() +  ")" + "<br/>" +
-                        "<b>City: </b>" + geoData.getCity() + ", " + geoData.getRegion() + "<br/>" +
-                        "<b>Latitude: </b>" + geoData.getLatitudeStr() + "°<br/>" +
-                        "<b>Longitude: </b>" + geoData.getLongitudeStr() + "°<br/>" +
-                        "<b>Fuseau horaire: </b>" + geoData.getTimezone() + "<br/>" +
-                        "<b>ISP: </b>" + geoData.getISP(), Html.FROM_HTML_MODE_LEGACY))
+                .setMessage(isRecentOs ? Html.fromHtml(alertMessage, Html.FROM_HTML_MODE_LEGACY) : Html.fromHtml(alertMessage))
                 .setPositiveButton("OK", null);
         builder.create().show();
     }
