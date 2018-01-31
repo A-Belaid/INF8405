@@ -5,14 +5,14 @@ package com.example.embroa.wifisearcher;
  */
 
 public class GeoData {
-    String country;
-    String city;
-    String countryCode;
-    double latitude;
-    double longitude;
-    String region;
-    String timezone;
-    String isp;
+    private String country;
+    private String city;
+    private String countryCode;
+    private double latitude;
+    private double longitude;
+    private String region;
+    private String timezone;
+    private String isp;
 
     public GeoData() {}
 

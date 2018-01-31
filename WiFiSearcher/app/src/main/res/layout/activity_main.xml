@@ -11,17 +11,6 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.example.embroa.wifisearcher.MainActivity">
 
-    <!-- The google map -->
-    <fragment xmlns:android="http://schemas.android.com/apk/res/android"
-        android:id="@+id/map"
-        android:name="com.google.android.gms.maps.MapFragment"
-        android:layout_width="match_parent"
-        android:layout_height="220dp"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_below="@+id/scanNumView"
-        android:layout_marginTop="11dp" />
-
     <TextView
         android:id="@+id/scanNumView"
         android:layout_width="wrap_content"
@@ -36,16 +25,18 @@
         android:layout_height="match_parent"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
-        android:layout_below="@+id/conDetailsBtn"
-        android:layout_marginTop="12dp" />
+        android:layout_below="@+id/conDetailsBtn" />
 
     <Button
         android:id="@+id/conDetailsBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/map"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="13dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentStart="true"
+        android:layout_below="@+id/scanNumView"
+        android:layout_marginTop="32dp"
         android:onClick="displayCurrentConDetails"
         android:text="Détails sur la connexion en cours"
         tools:clickable="false" />

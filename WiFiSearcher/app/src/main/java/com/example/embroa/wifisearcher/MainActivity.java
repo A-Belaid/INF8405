@@ -2,10 +2,10 @@ package com.example.embroa.wifisearcher;
 
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.net.wifi.ScanResult;
 import android.os.Build;
 import android.os.Handler;
-import android.support.v4.app.FragmentActivity;
 
 import android.support.annotation.RequiresApi;
 import android.support.v7.app.AlertDialog;
@@ -53,7 +53,6 @@ public class MainActivity extends AppCompatActivity {
 
     WifiManager wifi;
     Receiver wifiReceiver;
-    Map gMap;
 
     List<ScanResult> wifiResults;
     ArrayList<String> listSSID;
@@ -88,9 +87,6 @@ public class MainActivity extends AppCompatActivity {
         wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         if (!wifi.isWifiEnabled())
             wifi.setWifiEnabled(true);
-
-        //Create a map object
-        gMap = new Map();
 
         //Create a receiver object
         wifiReceiver = new Receiver();
@@ -169,6 +165,8 @@ public class MainActivity extends AppCompatActivity {
     @TargetApi(Build.VERSION_CODES.N)
     @RequiresApi(api = Build.VERSION_CODES.N)
     public void displayCurrentConDetails(View view) {
+        final MainActivity thisActivity = this;
+        final String netName = wifi.getConnectionInfo().getSSID();
         String alertMessage = "<b>Country: </b>" + geoData.getCountry() + " (" + geoData.getCountryCode() +  ")" + "<br/>" +
                 "<b>City: </b>" + geoData.getCity() + ", " + geoData.getRegion() + "<br/>" +
                 "<b>Latitude: </b>" + geoData.getLatitudeStr() + "°<br/>" +
@@ -179,9 +177,19 @@ public class MainActivity extends AppCompatActivity {
 
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Détails sur la connexion en cours")
+        builder.setTitle(netName)
                 .setMessage(isRecentOs ? Html.fromHtml(alertMessage, Html.FROM_HTML_MODE_LEGACY) : Html.fromHtml(alertMessage))
-                .setPositiveButton("OK", null);
+                .setPositiveButton("Localiser", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Intent toMapIntent = new Intent(thisActivity, MapsActivity.class);
+                        toMapIntent.putExtra("NAME", netName);
+                        toMapIntent.putExtra("LAT", geoData.getLatitude());
+                        toMapIntent.putExtra("LONG", geoData.getLongitude());
+                        startActivity(toMapIntent);
+                    }
+                })
+                .setNegativeButton("Retour", null);
         builder.create().show();
     }
 
@@ -235,24 +243,4 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-
-    //NOTE : It's the basic code from tutorials
-    // Google map class ////////////////////////////////////////////////////////////////////////////
-    class Map extends FragmentActivity implements OnMapReadyCallback {
-        @Override
-        public void onCreate(Bundle savedInstanceState) {
-            super.onCreate(savedInstanceState);
-            setContentView(R.layout.activity_main);
-
-            MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.map);
-            mapFragment.getMapAsync(this);
-        }
-
-        @Override //TODO : The marker is not showing...
-        public void onMapReady(GoogleMap map) {
-            map.addMarker(new MarkerOptions().position(new LatLng(0, 0)).title("Marker").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
-        }
-    }
-    ////////////////////////////////////////////////////////////////////////////////////////////////
 }
