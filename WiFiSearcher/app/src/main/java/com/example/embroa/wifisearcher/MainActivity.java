@@ -28,17 +28,20 @@ import android.content.pm.PackageManager;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.androidfung.geoip.IpApiService;
 import com.androidfung.geoip.ServicesManager;
 import com.androidfung.geoip.model.GeoIpResponseModel;
 
-import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.MapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,10 +60,12 @@ public class MainActivity extends AppCompatActivity {
     List<ScanResult> wifiResults;
     ArrayList<String> listSSID;
     ArrayAdapter<String> adapter;
+    JSONArray hotspotsArray;
     private final Handler scanHandler = new Handler();
     static final int LOCATION_PERMISSION_REQUEST = 1;
     Integer scanDelay = 1000;
     GeoData geoData;
+    boolean isFirstScan;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
 
         listSSID = new ArrayList<String>();
         adapter = null;
+        isFirstScan = true;
 
         scanListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -101,6 +107,12 @@ public class MainActivity extends AppCompatActivity {
             geoData = new GeoData();
             setGeoData();
             conDetailsBtn.setEnabled(true);
+
+            try {
+                requestGeoLocation();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
 
             scanWifi();
         }
@@ -151,13 +163,18 @@ public class MainActivity extends AppCompatActivity {
         scanWifi();
     }
 
-    //Displays an alert containing (for now) the capabilities of a selected scanned network
+    //Displays an alert containing (for now) the Mac Address, signal info, and capabilities of a selected scanned network
     //Capabilities: "Describes the authentication, key management, and encryption schemes supported by the access point."
     public void displayOneScan(int position){
+        boolean isRecentOs = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N;
+        ScanResult selectedResult = wifiResults.get(position);
         String alertTitle = listSSID.get(position);
-        String alertMessage = wifiResults.get(position).capabilities;
+        String alertMessage = "<b>MAC Address: </b>" + selectedResult.BSSID + "<br/>" +
+                "<b>Signal Level: </b>" + selectedResult.level + "dBm (" + WifiManager.calculateSignalLevel(selectedResult.level, 10) + "/10) <br/>" +
+                "<b>Capabilities: </b>" + selectedResult.capabilities;
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(alertTitle).setMessage(alertMessage).setPositiveButton("OK", null);
+        builder.setTitle(alertTitle).setMessage(isRecentOs ? Html.fromHtml(alertMessage, Html.FROM_HTML_MODE_LEGACY) : Html.fromHtml(alertMessage))
+                .setPositiveButton("OK", null);
         builder.create().show();
     }
 
@@ -172,7 +189,7 @@ public class MainActivity extends AppCompatActivity {
                 "<b>Latitude: </b>" + geoData.getLatitudeStr() + "°<br/>" +
                 "<b>Longitude: </b>" + geoData.getLongitudeStr() + "°<br/>" +
                 "<b>Fuseau horaire: </b>" + geoData.getTimezone() + "<br/>" +
-                "<b>ISP: </b>" + geoData.getISP();
+                "<b>ISP: </b>" + geoData.getISP() + "<br/></br>";
         boolean isRecentOs = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N;
 
 
@@ -218,6 +235,42 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    public void requestGeoLocation() throws JSONException {
+        final MainActivity thisActivity = this;
+
+        RequestQueue queue = Volley.newRequestQueue(this);
+        String url ="https://www.googleapis.com/geolocation/v1/geolocate?key=AIzaSyDHYnfgIctmnEUuXmqx24tm0KNLBidA78Q";
+
+        JSONObject requestObject = new JSONObject();
+        requestObject.put("considerIp", true);
+
+        requestObject.put("wifiAccessPoints", hotspotsArray);
+
+        JsonObjectRequest jsObjRequest = new JsonObjectRequest
+                (Request.Method.POST, url, requestObject, new Response.Listener<JSONObject>() {
+
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try {
+                            JSONObject locationObject = response.getJSONObject("location");
+                            geoData.setLatitude(locationObject.getDouble("lat"));
+                            geoData.setLongitude(locationObject.getDouble("lng"));
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }, new Response.ErrorListener() {
+
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        // TODO Auto-generated method stub
+                    }
+                });
+
+        queue.add(jsObjRequest);
+    }
+
     // Receiver class //////////////////////////////////////////////////////////////////////////////
     class Receiver extends BroadcastReceiver {
         public void onReceive(Context context, Intent intent) {
@@ -241,6 +294,29 @@ public class MainActivity extends AppCompatActivity {
                 adapter.notifyDataSetChanged();
                 scanListView.setVerticalScrollbarPosition(scanListPos);
             }
+
+            if(isFirstScan) {
+                try {
+                    setHotspotsArray();
+                    requestGeoLocation();
+                    isFirstScan = false;
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    //Saves the mac addresses of all detected wifis in a JSON array (for geolocalisation purposes)
+    public void setHotspotsArray() throws JSONException {
+        hotspotsArray = new JSONArray();
+
+        for(ScanResult scanResult : wifiResults) {
+            String macAddress = scanResult.BSSID;
+
+            JSONObject hotspotInstance = new JSONObject();
+            hotspotInstance.put("macAddress", macAddress);
+            hotspotsArray.put(hotspotInstance);
         }
     }
 }
