@@ -1,6 +1,8 @@
 package com.example.embroa.wifisearcher;
 
 import android.content.Intent;
+import android.graphics.BitmapFactory;
+import android.net.wifi.ScanResult;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 
@@ -8,8 +10,12 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -18,6 +24,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private String netName;
     private double latitude;
     private double longitude;
+    private ArrayList<LatLng> locations = new ArrayList();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,7 +57,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // Add a marker in Sydney and move the camera
         LatLng currentNet = new LatLng(latitude, longitude);
-        mMap.addMarker(new MarkerOptions().position(currentNet).title(netName));
+        mMap.addMarker(new MarkerOptions().position(currentNet).title(netName).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
         mMap.moveCamera(CameraUpdateFactory.newLatLng(currentNet));
+
+        for(ScanResult wifiResult: MainActivity.wifiResults) {
+
+            latitude += (Math.random()*2-1)/1000;
+            longitude += (Math.random()*2-1)/500;
+            LatLng netcoords = new LatLng(latitude, longitude);
+            boolean isNetworkPrivate = wifiResult.capabilities.contains("WPA") || wifiResult.capabilities.contains("TKIP");
+            mMap.addMarker(new MarkerOptions().position(netcoords).title(wifiResult.SSID).icon(BitmapDescriptorFactory.defaultMarker(isNetworkPrivate ? BitmapDescriptorFactory.HUE_RED : BitmapDescriptorFactory.HUE_BLUE)));
+        }
     }
 }

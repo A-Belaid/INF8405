@@ -37,6 +37,7 @@ import com.android.volley.toolbox.Volley;
 import com.androidfung.geoip.IpApiService;
 import com.androidfung.geoip.ServicesManager;
 import com.androidfung.geoip.model.GeoIpResponseModel;
+import com.google.android.gms.maps.model.LatLng;
 
 
 import org.json.JSONArray;
@@ -57,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
     WifiManager wifi;
     Receiver wifiReceiver;
 
-    List<ScanResult> wifiResults;
+    static List<ScanResult> wifiResults;
     ArrayList<String> listSSID;
     ArrayAdapter<String> adapter;
     JSONArray hotspotsArray;
@@ -200,9 +201,12 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         Intent toMapIntent = new Intent(thisActivity, MapsActivity.class);
+                        double latitude = geoData.getLatitude();
+                        double longitude = geoData.getLongitude();
+                        ArrayList<LatLng> locations = new ArrayList();
                         toMapIntent.putExtra("NAME", netName);
-                        toMapIntent.putExtra("LAT", geoData.getLatitude());
-                        toMapIntent.putExtra("LONG", geoData.getLongitude());
+                        toMapIntent.putExtra("LAT", latitude);
+                        toMapIntent.putExtra("LONG", longitude);
                         startActivity(toMapIntent);
                     }
                 })
