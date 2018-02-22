@@ -4,6 +4,7 @@ import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.net.wifi.ScanResult;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Handler;
 
@@ -117,6 +118,22 @@ public class MainActivity extends AppCompatActivity {
 
             scanWifi();
         }
+
+        final IntentFilter batteryLevelFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        BroadcastReceiver batteryLevelReceiver;
+
+        final MainActivity thisActivity = this;
+        batteryLevelReceiver = new BroadcastReceiver(){
+            @Override
+            public void onReceive(Context context, Intent intent){
+                int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+                float battPct = (level/(float)scale) * 100;
+                thisActivity.setTitle("Wifi Searcher (" + String.valueOf(battPct) + "%)");
+            }
+        };
+
+        registerReceiver(batteryLevelReceiver, batteryLevelFilter);
     }
 
     //Check the request result
