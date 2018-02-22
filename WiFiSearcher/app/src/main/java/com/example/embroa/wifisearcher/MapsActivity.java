@@ -3,6 +3,7 @@ package com.example.embroa.wifisearcher;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.net.wifi.ScanResult;
+import android.net.wifi.WifiManager;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 
@@ -10,6 +11,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -57,7 +59,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // Add a marker in Sydney and move the camera
         LatLng currentNet = new LatLng(latitude, longitude);
-        mMap.addMarker(new MarkerOptions().position(currentNet).title(netName).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+        mMap.addMarker(new MarkerOptions().position(currentNet).title(netName).icon(BitmapDescriptorFactory.fromResource(R.drawable.current_wifi)));
         mMap.moveCamera(CameraUpdateFactory.newLatLng(currentNet));
 
         for(ScanResult wifiResult: MainActivity.wifiResults) {
@@ -66,7 +68,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             longitude += (Math.random()*2-1)/500;
             LatLng netcoords = new LatLng(latitude, longitude);
             boolean isNetworkPrivate = wifiResult.capabilities.contains("WPA") || wifiResult.capabilities.contains("TKIP");
-            mMap.addMarker(new MarkerOptions().position(netcoords).title(wifiResult.SSID).icon(BitmapDescriptorFactory.defaultMarker(isNetworkPrivate ? BitmapDescriptorFactory.HUE_RED : BitmapDescriptorFactory.HUE_BLUE)));
+            int signalLevel = WifiManager.calculateSignalLevel(wifiResult.level, 3);
+            mMap.addMarker(new MarkerOptions().position(netcoords).title(wifiResult.SSID).icon(BitmapDescriptorFactory.fromResource(getMarkerColor(isNetworkPrivate, signalLevel))));
+        }
+    }
+
+    public int getMarkerColor(boolean isLocked, int signalLevel) {
+        if(isLocked) return getLockedMarkerColor(signalLevel);
+        else return getUnlockedMarkerColor(signalLevel);
+    }
+
+    public int getLockedMarkerColor(int signalLevel) {
+        switch(signalLevel) {
+            case 3: return R.drawable.private_wifi_3;
+            case 2:return R.drawable.private_wifi_2;
+            default: return R.drawable.private_wifi_1;
+        }
+    }
+
+    public int getUnlockedMarkerColor(int signalLevel) {
+        switch(signalLevel) {
+            case 3: return R.drawable.free_wifi_3;
+            case 2: return R.drawable.free_wifi_2;
+            default: return R.drawable.free_wifi_1;
         }
     }
 }

@@ -282,6 +282,7 @@ public class MainActivity extends AppCompatActivity {
 
             //Get available wifi
             wifiResults = wifi.getScanResults();
+            filterWifiResults();
 
             for (int i = 0; i < wifiResults.size(); i++)
                 listSSID.add(wifiResults.get(i).SSID);
@@ -309,6 +310,20 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
+    }
+
+    public void filterWifiResults() {
+        ArrayList<String> wifiNames = new ArrayList<String>();
+        ArrayList<ScanResult> scansToRemove = new ArrayList<ScanResult>();
+        for(ScanResult wifiResult: wifiResults) {
+            String wifiName = wifiResult.SSID;
+            if(wifiNames.contains(wifiName) || wifiName.equals("") || wifiName == null)
+                scansToRemove.add(wifiResult);
+            else
+                wifiNames.add(wifiName);
+        }
+        for(ScanResult scanToRemove: scansToRemove)
+            wifiResults.remove(scanToRemove);
     }
 
     //Saves the mac addresses of all detected wifis in a JSON array (for geolocalisation purposes)
