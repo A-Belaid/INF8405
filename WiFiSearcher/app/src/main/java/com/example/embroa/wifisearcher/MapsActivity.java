@@ -1,13 +1,19 @@
 package com.example.embroa.wifisearcher;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.support.v4.content.ContextCompat;
+import android.telephony.SmsManager;
 import android.text.Html;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -64,8 +70,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         favorites = new JSONArray();
         //TODO
-        try {
-            /*File dir = getFilesDir();
+        /*try {
+            File dir = getFilesDir();
             File favFile = new File(dir.getAbsolutePath() + '\\' + FAV_SCANS_FILE);
             if(!favFile.exists())
                 favFile.createNewFile();
@@ -78,12 +84,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             favorites = new JSONArray(jsonContent.equals("") ? "[]" : jsonContent);
             bufferedReader.close();
             inputStreamReader.close();
-            fileInputStream.close();*/
+            fileInputStream.close();
         } catch (IOException e) {
             Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
         } catch (JSONException e) {
 
-        }
+        }*/
     }
 
 
@@ -182,15 +188,48 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     "<b>Capabilities: </b>" + selectedMarkerScan.capabilities;
         }
 
+        final MapsActivity thisActivity = this;
         alertTitle = marker.getTitle();
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        final AlertDialog.Builder builder = new AlertDialog.Builder(thisActivity);
         builder.setTitle(alertTitle).setMessage(isRecentOs ? Html.fromHtml(alertMessage, Html.FROM_HTML_MODE_LEGACY) : Html.fromHtml(alertMessage))
                 .setNegativeButton("OK", null);
 
         if(alertTitle.equals(netName)) {
+            builder.setNegativeButton("Partager", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    boolean hasSMSPermission = (ContextCompat.checkSelfPermission(thisActivity, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED);
+                    if (!hasSMSPermission) {
+                        ActivityCompat.requestPermissions(thisActivity, new String[]{Manifest.permission.SEND_SMS}, 0);
+                    }
+
+                    hasSMSPermission = (ContextCompat.checkSelfPermission(thisActivity, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED);
+                    if(hasSMSPermission) {
+                        final EditText phoneNumberTxt = new EditText(thisActivity);
+
+                        AlertDialog.Builder smsBuilder = new AlertDialog.Builder(thisActivity);
+                        smsBuilder.setTitle("Partager").setMessage("Entrez le numéro de la personne avec laquelle vous souhaitez partager ce réseau:")
+                                .setView(phoneNumberTxt)
+                                .setNegativeButton("Annuler", null)
+                                .setPositiveButton("Valider", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        String smsMessage = "Viens voir! Je viens de trouver le wifi suivant!\n" +
+                                                "Nom: " + marker.getTitle() +
+                                                "\nLatitude: " + String.valueOf(latitude) +
+                                                "\nLongitude: " + String.valueOf(longitude);
+
+                                        SmsManager smsManager = SmsManager.getDefault();
+                                        smsManager.sendTextMessage(phoneNumberTxt.getText().toString(), null, smsMessage, null, null);
+                                    }
+                                });
+                        smsBuilder.create().show();
+                    }
+                }
+            });
             if(isMarkerFavorite(marker)) {
-                builder.setPositiveButton("Remove from Favs.", new DialogInterface.OnClickListener() {
+                builder.setPositiveButton("Retirer des Favs.", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         favorites.remove(getFavIndex(marker.getTitle()));
@@ -199,7 +238,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                 });
             } else {
-                builder.setPositiveButton("Add to Favs.", new DialogInterface.OnClickListener() {
+                builder.setPositiveButton("Ajouter aux Favs.", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         try {
