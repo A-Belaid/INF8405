@@ -96,15 +96,13 @@ public class MainActivity extends AppCompatActivity {
         if (!wifi.isWifiEnabled())
             wifi.setWifiEnabled(true);
 
-        //Create a receiver object
         wifiReceiver = new Receiver();
         registerReceiver(wifiReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
 
-        //Check for location permission (wifi scan doesn't work otherwise)
         int permissionCheck = ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION);
-        if(permissionCheck != PackageManager.PERMISSION_GRANTED) //Ask for permission if not granted
+        if(permissionCheck != PackageManager.PERMISSION_GRANTED)
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, LOCATION_PERMISSION_REQUEST);
-        else //Scan for wifi otherwise
+        else
         {
             geoData = new GeoData();
             setGeoData();
@@ -141,18 +139,13 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         switch (requestCode) {
             case LOCATION_PERMISSION_REQUEST: {
-                // If the request is accepted, we scan for wifi
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
                     scanWifi();
-                else { //Otherwise...
-                    /*TODO*/
-                }
-                return;
             }
         }
     }
 
-    //Scan for wifi every scanDelay milliseconds
+    //Scan for wifi every 1000 milliseconds
     public void scanWifi() {
         scanHandler.postDelayed(new Runnable() {
             @Override
@@ -181,7 +174,7 @@ public class MainActivity extends AppCompatActivity {
         scanWifi();
     }
 
-    //Displays an alert containing (for now) the Mac Address, signal info, and capabilities of a selected scanned network
+    //Displays an alert containing all relevant infos related to a selected scanned network
     //Capabilities: "Describes the authentication, key management, and encryption schemes supported by the access point."
     public void displayOneScan(int position){
         boolean isRecentOs = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N;
@@ -196,7 +189,7 @@ public class MainActivity extends AppCompatActivity {
         builder.create().show();
     }
 
-    //Displays an alert containing (for now) the geolocation of the current connection
+    //Displays an alert containing data about the current connection
     @TargetApi(Build.VERSION_CODES.N)
     @RequiresApi(api = Build.VERSION_CODES.N)
     public void displayCurrentConDetails(View view) {
@@ -231,7 +224,7 @@ public class MainActivity extends AppCompatActivity {
         builder.create().show();
     }
 
-    //Saves tne current connection's geolocation, based on its IP
+    //Saves tne current connection's data, based on its IP
     public void setGeoData() {
         final MainActivity thisActivity = this;
 
@@ -256,6 +249,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    //Saves tne current connection geolocation, using the Google Maps Geolocation API
     public void requestGeoLocation() throws JSONException {
         final MainActivity thisActivity = this;
 
@@ -292,7 +286,7 @@ public class MainActivity extends AppCompatActivity {
         queue.add(jsObjRequest);
     }
 
-    // Receiver class //////////////////////////////////////////////////////////////////////////////
+    //Updates the list of available networks after each scan (every 1000ms)
     class Receiver extends BroadcastReceiver {
         public void onReceive(Context context, Intent intent) {
             listSSID.clear();
@@ -329,6 +323,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    //Removes duplicate network names, and nameless networks
     public void filterWifiResults() {
         ArrayList<String> wifiNames = new ArrayList<String>();
         ArrayList<ScanResult> scansToRemove = new ArrayList<ScanResult>();

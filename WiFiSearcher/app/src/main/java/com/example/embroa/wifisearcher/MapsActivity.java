@@ -69,27 +69,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         longitude = intent.getDoubleExtra("LONG", 0);
 
         favorites = new JSONArray();
-        //TODO
-        /*try {
-            File dir = getFilesDir();
-            File favFile = new File(dir.getAbsolutePath() + '\\' + FAV_SCANS_FILE);
-            if(!favFile.exists())
-                favFile.createNewFile();
-            FileInputStream fileInputStream = openFileInput(dir.getAbsolutePath() + '/' + FAV_SCANS_FILE);//Crash ici
-            InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream);
-            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-            String line;
-            String jsonContent = "";
-            while ((line = bufferedReader.readLine()) != null) jsonContent += line;
-            favorites = new JSONArray(jsonContent.equals("") ? "[]" : jsonContent);
-            bufferedReader.close();
-            inputStreamReader.close();
-            fileInputStream.close();
-        } catch (IOException e) {
-            Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
-        } catch (JSONException e) {
-
-        }*/
     }
 
 
@@ -106,13 +85,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        // Add a marker in Sydney and move the camera
+        //Place a marker for the current Network
         LatLng currentNet = new LatLng(latitude, longitude);
         MarkerOptions currentMarker = new MarkerOptions().position(currentNet).title(netName);
         currentMarker.icon(BitmapDescriptorFactory.fromResource(isMarkerOptionsFavorite(currentMarker) ? R.drawable.fav_wifi : R.drawable.current_wifi));
         mMap.addMarker(currentMarker);
         mMap.moveCamera(CameraUpdateFactory.newLatLng(currentNet));
 
+        //Place markers for the other networks
         double randLat = latitude;
         double randLng = longitude;
         for(ScanResult wifiResult: MainActivity.wifiResults) {
@@ -127,6 +107,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }
 
+        //Place markers for the favorite networks
         for(int i = 0; i < favorites.length(); i++) {
             try {
                 JSONObject obj = (JSONObject) favorites.get(i);
@@ -169,6 +150,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    //Creates an alert containing the data related to the network of the selected marker,
+    //as well as options depending on the nature of the network (Current Network, Favorite Network, Other Network)
     public AlertDialog.Builder getMarkerAlert(final Marker marker) {
         boolean isRecentOs = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N;
         String alertTitle = "";
@@ -233,7 +216,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         favorites.remove(getFavIndex(marker.getTitle()));
-                        updateFavs();
                         marker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.current_wifi));
                     }
                 });
@@ -249,7 +231,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             newFav.put("Lat", latitude);
                             newFav.put("Lng", longitude);
                             favorites.put(newFav);
-                            updateFavs();
                             marker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.fav_wifi));
                         } catch (JSONException e) {
 
@@ -263,7 +244,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     favorites.remove(getFavIndex(marker.getTitle()));
-                    updateFavs();
                 }
             });
         }
@@ -271,6 +251,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return builder;
     }
 
+    //Gets the data related to the network of the selected marker
     public ScanResult getSelectedMarkerScan(Marker marker) {
         for(ScanResult scanResult: MainActivity.wifiResults) {
             String name = "\"" + scanResult.SSID + "\"";
@@ -281,6 +262,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return null;
     }
 
+    //Gets the index of a network's data in the favorites array
     public int getFavIndex(String name1) {
         try {
             for(int i = 0; i < favorites.length(); i++) {
@@ -294,20 +276,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         return -1;
-    }
-
-    public JSONObject getSelectedMarkerDetailedScan(Marker marker) {
-        //for(JSONObject scanResult: favorites) {
-        try {
-            for(int i = 0; i < favorites.length(); i++) {
-                JSONObject obj = (JSONObject) favorites.get(i);
-                String name = "\"" + obj.getString("Name") + "\"";
-                if(marker.getTitle().equals(name))
-                    return obj;
-            }
-        } catch (JSONException e) {}
-
-        return null;
     }
 
     public boolean isMarkerFavorite(Marker marker) {
@@ -338,21 +306,5 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         return false;
-    }
-
-    public void updateFavs() {
-        //TODO
-        /*try {
-            File dir = getFilesDir();
-            FileOutputStream fileOutputStream = new FileOutputStream(dir.getAbsolutePath() + '/' + FAV_SCANS_FILE);
-            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(fileOutputStream);
-            BufferedWriter bufferedWriter = new BufferedWriter(outputStreamWriter);
-            bufferedWriter.write(favorites.toString());
-            bufferedWriter.close();
-            outputStreamWriter.close();
-            fileOutputStream.close();
-        } catch (IOException e) {
-            Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
-        }*/
     }
 }
