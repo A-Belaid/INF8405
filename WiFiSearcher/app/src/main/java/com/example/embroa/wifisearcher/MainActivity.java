@@ -375,4 +375,9 @@ public class MainActivity extends AppCompatActivity {
     public SQLiteDatabase getProjectDB() {
         return openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
     }
+
+    public void showStepCounterActivity(View view) {
+        Intent myIntent = new Intent(this, StepCounterActivity.class);
+        /*MainActivity.this.*/startActivity(myIntent);
+    }
 }

@@ -28,7 +28,21 @@
         android:layout_below="@+id/conDetailsBtn" />
 
     <Button
-        android:id="@+id/conDetailsBtn"
+    android:id="@+id/conDetailsBtn"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_alignParentEnd="true"
+    android:layout_alignParentLeft="true"
+    android:layout_alignParentRight="true"
+    android:layout_alignParentStart="true"
+    android:layout_below="@+id/scanNumView"
+    android:layout_marginTop="32dp"
+    android:onClick="displayCurrentConDetails"
+    android:text="Détails sur la connexion en cours"
+    tools:clickable="false" />
+
+    <Button
+        android:id="@+id/showStepCounterBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentEnd="true"
@@ -36,9 +50,9 @@
         android:layout_alignParentRight="true"
         android:layout_alignParentStart="true"
         android:layout_below="@+id/scanNumView"
-        android:layout_marginTop="32dp"
-        android:onClick="displayCurrentConDetails"
-        android:text="Détails sur la connexion en cours"
+        android:layout_marginTop="300dp"
+        android:onClick="showStepCounterActivity"
+        android:text="Show stepCounter"
         tools:clickable="false" />
 
 </RelativeLayout>
