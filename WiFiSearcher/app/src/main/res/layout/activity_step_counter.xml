@@ -18,7 +18,6 @@
         android:layout_width="50dp"
         android:layout_height="50dp"
         android:layout_marginTop="250dp"
-        android:onClick="startCounter"
         android:text="Start" />
 
     <Button
@@ -26,7 +25,6 @@
         android:layout_width="50dp"
         android:layout_height="50dp"
         android:layout_marginTop="300dp"
-        android:onClick="pauseCounter"
         android:text="Pause" />
 
     <Button
@@ -34,7 +32,6 @@
         android:layout_width="50dp"
         android:layout_height="50dp"
         android:layout_marginTop="350dp"
-        android:onClick="resetCounter"
         android:text="Reset" />
 
     <Button
@@ -42,7 +39,6 @@
         android:layout_width="50dp"
         android:layout_height="50dp"
         android:layout_marginTop="400dp"
-        android:onClick="stopCounter"
         android:text="Stop" />
 
     <Button
@@ -50,7 +46,6 @@
         android:layout_width="50dp"
         android:layout_height="50dp"
         android:layout_marginTop="450dp"
-        android:onClick="resumeCounter"
         android:text="Resume" />
 
 </LinearLayout>

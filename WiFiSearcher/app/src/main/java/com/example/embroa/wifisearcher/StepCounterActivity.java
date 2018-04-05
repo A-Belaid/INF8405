@@ -20,6 +20,7 @@ public class StepCounterActivity extends Activity {
     private SensorManager sensorManager;
     private Sensor stepSensor;
     private TextView textView;
+    private float stepOffset;
 
     private boolean isStepSensorSupported(){
         // Require at least Android KitKat
@@ -49,12 +50,33 @@ public class StepCounterActivity extends Activity {
             textView.setText("Cette application n'est pas supportée.");
             findViewById(R.id.startBtn).setVisibility(View.INVISIBLE);
         }
+
+        findViewById(R.id.startBtn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startCounter();
+            }
+        });
+
+        findViewById(R.id.stopBtn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                stopCounter();
+            }
+        });
+
+        findViewById(R.id.resetBtn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                resetCounter();
+            }
+        });
     }
     protected void startCounter() {
         textView.setText("");
         findViewById(R.id.stopBtn).setVisibility(View.VISIBLE);
         findViewById(R.id.resetBtn).setVisibility(View.VISIBLE);
-        findViewById(R.id.pauseBtn).setVisibility(View.VISIBLE);
+        findViewById(R.id.pauseBtn).setVisibility(View.INVISIBLE);
         findViewById(R.id.resumeBtn).setVisibility(View.INVISIBLE);
         findViewById(R.id.startBtn).setVisibility(View.INVISIBLE);
 
@@ -62,9 +84,10 @@ public class StepCounterActivity extends Activity {
         stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
         sensorManager.registerListener(sensorEventListener, stepSensor, SensorManager.SENSOR_DELAY_NORMAL);
 
+        stepOffset = 0;
     }
 
-    protected void resumeCounter() {
+    /*protected void resumeCounter() {
         sensorManager.registerListener(sensorEventListener, stepSensor,
                 SensorManager.SENSOR_DELAY_NORMAL);
 
@@ -73,15 +96,14 @@ public class StepCounterActivity extends Activity {
     }
 
     protected void pauseCounter() {
-        sensorManager.unregisterListener(sensorEventListener);
+        sensorManager.unregisterListener(sensorEventListener, stepSensor);
 
         findViewById(R.id.pauseBtn).setVisibility(View.INVISIBLE);
         findViewById(R.id.resumeBtn).setVisibility(View.VISIBLE);
-
-    }
+    }*/
 
     protected void stopCounter() {
-        sensorManager.unregisterListener(sensorEventListener);
+        sensorManager.unregisterListener(sensorEventListener, stepSensor);
 
         findViewById(R.id.stopBtn).setVisibility(View.INVISIBLE);
         findViewById(R.id.resetBtn).setVisibility(View.INVISIBLE);
@@ -91,13 +113,11 @@ public class StepCounterActivity extends Activity {
     }
 
     protected void resetCounter() {
-        sensorManager.unregisterListener(sensorEventListener);
+        sensorManager.unregisterListener(sensorEventListener, stepSensor);
         startCounter();
     }
 
-    private SensorEventListener sensorEventListener = new SensorEventListener() {
-        private float stepOffset;
-
+    public SensorEventListener sensorEventListener = new SensorEventListener() {
         @Override
         public void onAccuracyChanged(Sensor sensor, int accuracy) {
 
