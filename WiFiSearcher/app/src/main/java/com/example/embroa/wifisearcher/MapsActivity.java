@@ -29,11 +29,25 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import com.google.android.gms.maps.model.PolylineOptions;
+import android.os.AsyncTask;
+import android.graphics.Color;
+import java.util.HashMap;
+import java.util.List;
+
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -58,9 +72,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         BroadcastReceiver batteryLevelReceiver;
 
         BatteryHistory.initHistory("MapsActivity");
-        batteryLevelReceiver = new BroadcastReceiver(){
+        batteryLevelReceiver = new BroadcastReceiver() {
             @Override
-            public void onReceive(Context context, Intent intent){
+            public void onReceive(Context context, Intent intent) {
                 BatteryHistory.callbackOnReceive(intent, getProjectDB());
             }
         };
@@ -74,11 +88,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         favorites = new JSONArray();
         initFavDatabase();
+
+        String url = getDirectionsUrl(new LatLng(40.722543,
+                -73.998585), new LatLng(40.7064, -74.0094));
+        ReadTask downloadTask = new ReadTask();
+        downloadTask.execute(url);
     }
 
     @Override
-    protected void onRestart()
-    {
+    protected void onRestart() {
         super.onRestart();
         BatteryHistory.initHistory("MapsActivity");
     }
@@ -101,16 +119,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         MarkerOptions currentMarker = new MarkerOptions().position(currentNet).title(netName);
         currentMarker.icon(BitmapDescriptorFactory.fromResource(isMarkerOptionsFavorite(currentMarker) ? R.drawable.fav_wifi : R.drawable.current_wifi));
         mMap.addMarker(currentMarker);
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(currentNet));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentNet, 17));
 
         //Place markers for the other networks
         double randLat = latitude;
         double randLng = longitude;
-        for(ScanResult wifiResult: MainActivity.wifiResults) {
+        for (ScanResult wifiResult : MainActivity.wifiResults) {
             String wifiName = "\"" + wifiResult.SSID + "\"";
-            if(!wifiName.equals(netName)) {
-                randLat += (Math.random()*2-1)/1000;
-                randLng += (Math.random()*2-1)/500;
+            if (!wifiName.equals(netName)) {
+                randLat += (Math.random() * 2 - 1) / 1000;
+                randLng += (Math.random() * 2 - 1) / 500;
                 LatLng netcoords = new LatLng(randLat, randLng);
                 boolean isNetworkPrivate = wifiResult.capabilities.contains("WPA") || wifiResult.capabilities.contains("TKIP");
                 int signalLevel = WifiManager.calculateSignalLevel(wifiResult.level, 3);
@@ -119,11 +137,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         //Place markers for the favorite networks
-        for(int i = 0; i < favorites.length(); i++) {
+        for (int i = 0; i < favorites.length(); i++) {
             try {
                 JSONObject obj = (JSONObject) favorites.get(i);
                 String wifiName = "\"" + obj.getString("Name") + "\"";
-                if(!wifiName.equals(netName)) {
+                if (!wifiName.equals(netName)) {
                     LatLng netcoords = new LatLng(obj.getDouble("Lat"), obj.getDouble("Lng"));
                     mMap.addMarker(new MarkerOptions().position(netcoords).title(wifiName).icon(BitmapDescriptorFactory.fromResource(R.drawable.fav_wifi)));
                 }
@@ -134,30 +152,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
             @Override
-            public void onInfoWindowClick(Marker marker){
+            public void onInfoWindowClick(Marker marker) {
                 getMarkerAlert(marker).create().show();
             }
         });
     }
 
     public int getMarkerColor(boolean isLocked, int signalLevel) {
-        if(isLocked) return getLockedMarkerColor(signalLevel);
+        if (isLocked) return getLockedMarkerColor(signalLevel);
         else return getUnlockedMarkerColor(signalLevel);
     }
 
     public int getLockedMarkerColor(int signalLevel) {
-        switch(signalLevel) {
-            case 3: return R.drawable.private_wifi_3;
-            case 2:return R.drawable.private_wifi_2;
-            default: return R.drawable.private_wifi_1;
+        switch (signalLevel) {
+            case 3:
+                return R.drawable.private_wifi_3;
+            case 2:
+                return R.drawable.private_wifi_2;
+            default:
+                return R.drawable.private_wifi_1;
         }
     }
 
     public int getUnlockedMarkerColor(int signalLevel) {
-        switch(signalLevel) {
-            case 3: return R.drawable.free_wifi_3;
-            case 2: return R.drawable.free_wifi_2;
-            default: return R.drawable.free_wifi_1;
+        switch (signalLevel) {
+            case 3:
+                return R.drawable.free_wifi_3;
+            case 2:
+                return R.drawable.free_wifi_2;
+            default:
+                return R.drawable.free_wifi_1;
         }
     }
 
@@ -168,7 +192,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         String alertTitle = "";
         String alertMessage = "";
 
-        if(isMarkerFavorite(marker)) {
+        if (isMarkerFavorite(marker)) {
             try {
                 JSONObject obj = (JSONObject) favorites.get(getFavIndex(marker.getTitle()));
                 alertMessage = "<b>MAC Address: </b>" + obj.getString("Mac") + "<br/>" +
@@ -189,7 +213,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         builder.setTitle(alertTitle).setMessage(isRecentOs ? Html.fromHtml(alertMessage, Html.FROM_HTML_MODE_LEGACY) : Html.fromHtml(alertMessage))
                 .setNegativeButton("OK", null);
 
-        if(alertTitle.equals(netName)) {
+        if (alertTitle.equals(netName)) {
             builder.setNegativeButton("Partager", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
@@ -199,7 +223,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
 
                     hasSMSPermission = (ContextCompat.checkSelfPermission(thisActivity, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED);
-                    if(hasSMSPermission) {
+                    if (hasSMSPermission) {
                         final EditText phoneNumberTxt = new EditText(thisActivity);
 
                         AlertDialog.Builder smsBuilder = new AlertDialog.Builder(thisActivity);
@@ -222,7 +246,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                 }
             });
-            if(isMarkerFavorite(marker)) {
+            if (isMarkerFavorite(marker)) {
                 builder.setPositiveButton("Retirer des Favs.", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
@@ -250,7 +274,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                 });
             }
-        } else if(isMarkerFavorite(marker)) {
+        } else if (isMarkerFavorite(marker)) {
             builder.setPositiveButton("Remove from Favs.", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
@@ -264,9 +288,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     //Gets the data related to the network of the selected marker
     public ScanResult getSelectedMarkerScan(Marker marker) {
-        for(ScanResult scanResult: MainActivity.wifiResults) {
+        for (ScanResult scanResult : MainActivity.wifiResults) {
             String name = "\"" + scanResult.SSID + "\"";
-            if(marker.getTitle().equals(name))
+            if (marker.getTitle().equals(name))
                 return scanResult;
         }
 
@@ -276,10 +300,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     //Gets the index of a network's data in the favorites array
     public int getFavIndex(String name1) {
         try {
-            for(int i = 0; i < favorites.length(); i++) {
+            for (int i = 0; i < favorites.length(); i++) {
                 JSONObject obj = (JSONObject) favorites.get(i);
                 String name2 = "\"" + obj.getString("Name") + "\"";
-                if(name1.equals(name2))
+                if (name1.equals(name2))
                     return i;
             }
         } catch (JSONException e) {
@@ -291,10 +315,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     public boolean isMarkerFavorite(Marker marker) {
         try {
-            for(int i = 0; i < favorites.length(); i++) {
+            for (int i = 0; i < favorites.length(); i++) {
                 JSONObject obj = (JSONObject) favorites.get(i);
                 String name = "\"" + obj.getString("Name") + "\"";
-                if(marker.getTitle().equals(name))
+                if (marker.getTitle().equals(name))
                     return true;
             }
         } catch (JSONException e) {
@@ -305,11 +329,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public boolean isMarkerOptionsFavorite(MarkerOptions marker) {
-        try{
-            for(int i = 0; i < favorites.length(); i++) {
+        try {
+            for (int i = 0; i < favorites.length(); i++) {
                 JSONObject obj = (JSONObject) favorites.get(i);
                 String name = "\"" + obj.getString("Name") + "\"";
-                if(marker.getTitle().equals(name))
+                if (marker.getTitle().equals(name))
                     return true;
             }
         } catch (JSONException e) {
@@ -330,7 +354,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         Cursor favs = db.rawQuery("SELECT * FROM FAVORITES", null);
         favs.moveToFirst();
-        while(!favs.isAfterLast()) {
+        while (!favs.isAfterLast()) {
             try {
                 JSONObject oneFav = new JSONObject();
                 oneFav.put("Name", favs.getString(favs.getColumnIndex("NAME")));
@@ -340,7 +364,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 oneFav.put("Lng", favs.getDouble(favs.getColumnIndex("LNG")));
                 favorites.put(oneFav);
                 favs.moveToNext();
-            } catch(JSONException e) {}
+            } catch (JSONException e) {
+            }
         }
 
         db.close();
@@ -356,7 +381,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     String.valueOf(oneFav.getDouble("Lng")) + ")");
 
             favorites.put(oneFav);
-        } catch (JSONException e) {}
+        } catch (JSONException e) {
+        }
 
         db.close();
     }
@@ -371,10 +397,106 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             db.execSQL("DELETE FROM FAVORITES WHERE LAT = " + String.valueOf(lat) + " AND LNG = " + String.valueOf(lng) + "");
             favorites.remove(favIndex);
             db.close();
-        } catch(JSONException e) {}
+        } catch (JSONException e) {
+        }
     }
 
     public SQLiteDatabase getProjectDB() {
         return openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
+    }
+
+    /*Directions*/
+
+    private String getDirectionsUrl(LatLng origin, LatLng dest) {
+
+        // Origin of route
+        String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
+
+        // Destination of route
+        String str_dest = "destination=" + dest.latitude + "," + dest.longitude;
+
+        // Sensor enabled
+        String sensor = "sensor=false";
+
+        // Building the parameters to the web service
+        String parameters = str_origin + "&" + str_dest + "&" + sensor;
+
+        // Output format
+        String output = "json";
+
+        // Building the url to the web service
+        String url = "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters;
+
+        return url;
+    }
+
+    private class ReadTask extends AsyncTask<String, Void, String> {
+        @Override
+        protected String doInBackground(String... url) {
+            String data = "";
+            try {
+                HttpConnection http = new HttpConnection();
+                data = http.readUrl(url[0]);
+            } catch (Exception e) {
+                /**/
+            }
+            return data;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+            new ParserTask().execute(result);
+        }
+    }
+
+    private class ParserTask extends
+            AsyncTask<String, Integer, List<List<HashMap<String, String>>>> {
+
+        @Override
+        protected List<List<HashMap<String, String>>> doInBackground(
+                String... jsonData) {
+
+            JSONObject jObject;
+            List<List<HashMap<String, String>>> routes = null;
+
+            try {
+                jObject = new JSONObject(jsonData[0]);
+                PathJSONParser parser = new PathJSONParser();
+                routes = parser.parse(jObject);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return routes;
+        }
+
+        @Override
+        protected void onPostExecute(List<List<HashMap<String, String>>> routes) {
+            ArrayList<LatLng> points = null;
+            PolylineOptions polyLineOptions = null;
+
+            // traversing through routes
+            for (int i = 0; i < routes.size(); i++) {
+                points = new ArrayList<LatLng>();
+                polyLineOptions = new PolylineOptions();
+                List<HashMap<String, String>> path = routes.get(i);
+
+                for (int j = 0; j < path.size(); j++) {
+                    HashMap<String, String> point = path.get(j);
+
+                    double lat = Double.parseDouble(point.get("lat"));
+                    double lng = Double.parseDouble(point.get("lng"));
+                    LatLng position = new LatLng(lat, lng);
+
+                    points.add(position);
+                }
+
+                polyLineOptions.addAll(points);
+                polyLineOptions.width(2);
+                polyLineOptions.color(Color.BLUE);
+            }
+
+            mMap.addPolyline(polyLineOptions);
+        }
     }
 }
