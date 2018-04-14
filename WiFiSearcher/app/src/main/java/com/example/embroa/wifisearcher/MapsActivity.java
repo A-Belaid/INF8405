@@ -1,6 +1,7 @@
 package com.example.embroa.wifisearcher;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -9,6 +10,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.location.Location;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.support.v4.app.ActivityCompat;
@@ -17,9 +19,14 @@ import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 import android.telephony.SmsManager;
 import android.text.Html;
+import android.util.Log;
 import android.widget.EditText;
 import android.database.sqlite.*;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -29,9 +36,16 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+
 import android.os.AsyncTask;
 import android.graphics.Color;
+
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 
@@ -48,6 +62,13 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 
+import com.google.android.gms.location.LocationServices;
+
+import android.location.Location;
+
+import com.google.android.gms.tasks.*;
+
+import android.support.annotation.NonNull;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -59,6 +80,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private ArrayList<LatLng> locations = new ArrayList();
     private JSONArray favorites;
 
+    final private String FAV_SCANS_FILE = "FavScans.json";
+
+    private FusedLocationProviderClient mFusedLocationClient;
+    private Location mLastKnownLocation;
+    private Marker userMarker;
+    private LocationCallback mLocationCallback;
+    private LocationRequest mLocationRequest;
+    private Marker selectedMarker;
+    private Polyline polyLinePath;
+
+
+    @SuppressLint("MissingPermission")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -89,10 +122,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         favorites = new JSONArray();
         initFavDatabase();
 
-        String url = getDirectionsUrl(new LatLng(40.722543,
-                -73.998585), new LatLng(40.7064, -74.0094));
-        ReadTask downloadTask = new ReadTask();
-        downloadTask.execute(url);
+        selectedMarker = null;
+        polyLinePath = null;
+        userMarker = null;
+        mLastKnownLocation = null;
+        // Construct a FusedLocationProviderClient.
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        //Location request
+        mLocationRequest = new LocationRequest();
+        mLocationRequest.setInterval(1000);
+        mLocationRequest.setFastestInterval(500);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+        //Location callback
+        mLocationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if (locationResult == null) {
+                    return;
+                }
+                for (Location location : locationResult.getLocations()) {
+                    // Update UI with location data
+                    if (mLastKnownLocation != location) {
+                        mLastKnownLocation = location;
+                        userMarker.setPosition(new LatLng(mLastKnownLocation.getLatitude(), mLastKnownLocation.getLongitude()));
+                    }
+                }
+            }
+        };
+
     }
 
     @Override
@@ -110,6 +169,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      * it inside the SupportMapFragment. This method will only be triggered once the user has
      * installed Google Play services and returned to the app.
      */
+    @SuppressLint("MissingPermission")
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
@@ -119,7 +179,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         MarkerOptions currentMarker = new MarkerOptions().position(currentNet).title(netName);
         currentMarker.icon(BitmapDescriptorFactory.fromResource(isMarkerOptionsFavorite(currentMarker) ? R.drawable.fav_wifi : R.drawable.current_wifi));
         mMap.addMarker(currentMarker);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentNet, 17));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentNet, 15));
 
         //Place markers for the other networks
         double randLat = latitude;
@@ -156,6 +216,54 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 getMarkerAlert(marker).create().show();
             }
         });
+
+        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(Marker marker){
+                //If user clicks on an already selected marker
+                if(marker.equals(selectedMarker)) {
+                    selectedMarker = null;
+
+                    polyLinePath.remove();
+                    polyLinePath = null;
+
+                    marker.hideInfoWindow();
+                }//If a marker is already selected and user clicks on another marker
+                else if (polyLinePath != null) {
+                    polyLinePath.remove();
+                    polyLinePath = null;
+                    selectedMarker.hideInfoWindow();
+
+                    selectedMarker = marker;
+                    drawPath(selectedMarker);
+
+                    marker.showInfoWindow();
+
+                }//If no marker is already selected
+                else if(!marker.equals(selectedMarker)) {
+                    selectedMarker = marker;
+                    drawPath(selectedMarker);
+
+                    marker.showInfoWindow();
+                }
+                return true;
+            }
+        });
+        // Get the current location of the device and set the position of the map.
+        mFusedLocationClient.getLastLocation()
+                .addOnSuccessListener(this, new OnSuccessListener<Location>() {
+                    @Override
+                    public void onSuccess(Location location) {
+                        // Got last known location. In some rare situations this can be null.
+                        if (location != null) {
+                            mLastKnownLocation = location;
+                            MarkerOptions userMarkerOptions = new MarkerOptions().position(new LatLng(mLastKnownLocation.getLatitude(), mLastKnownLocation.getLongitude()));
+                            userMarker = mMap.addMarker(userMarkerOptions);
+                        }
+                    }
+                });
+
+        mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, null /* Looper */);
     }
 
     public int getMarkerColor(boolean isLocked, int signalLevel) {
@@ -405,10 +513,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
     }
 
-    /*Directions*/
+    /************** Direction path **************/
+    public void drawPath(Marker selectedMarker) {
+        String url = getDirectionsUrl(new LatLng(mLastKnownLocation.getLatitude(),
+                mLastKnownLocation.getLongitude()), selectedMarker.getPosition());
 
-    private String getDirectionsUrl(LatLng origin, LatLng dest) {
+        ReadTask downloadTask = new ReadTask();
+        downloadTask.execute(url);
+    }
 
+    private String getDirectionsUrl(LatLng origin,LatLng dest){
         // Origin of route
         String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
 
@@ -417,9 +531,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // Sensor enabled
         String sensor = "sensor=false";
+        String mode = "mode=walking";
 
         // Building the parameters to the web service
-        String parameters = str_origin + "&" + str_dest + "&" + sensor;
+        String parameters = str_origin+"&"+str_dest+"&"+sensor+"&"+mode;
 
         // Output format
         String output = "json";
@@ -435,10 +550,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         protected String doInBackground(String... url) {
             String data = "";
             try {
-                HttpConnection http = new HttpConnection();
-                data = http.readUrl(url[0]);
+                data = readUrl(url[0]);
             } catch (Exception e) {
-                /**/
+                Log.d("Background Task", e.toString());
             }
             return data;
         }
@@ -496,7 +610,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 polyLineOptions.color(Color.BLUE);
             }
 
-            mMap.addPolyline(polyLineOptions);
+            polyLinePath = mMap.addPolyline(polyLineOptions);
         }
+    }
+
+    public String readUrl(String mapsApiDirectionsUrl) throws IOException {
+        String data = "";
+        InputStream iStream = null;
+        HttpURLConnection urlConnection = null;
+        try {
+            URL url = new URL(mapsApiDirectionsUrl);
+            urlConnection = (HttpURLConnection) url.openConnection();
+            urlConnection.connect();
+            iStream = urlConnection.getInputStream();
+            BufferedReader br = new BufferedReader(new InputStreamReader(
+                    iStream));
+            StringBuffer sb = new StringBuffer();
+            String line = "";
+            while ((line = br.readLine()) != null) {
+                sb.append(line);
+            }
+            data = sb.toString();
+            br.close();
+        } catch (Exception e) {
+            Log.d("Exception while reading url", e.toString());
+        } finally {
+            iStream.close();
+            urlConnection.disconnect();
+        }
+        return data;
     }
 }
