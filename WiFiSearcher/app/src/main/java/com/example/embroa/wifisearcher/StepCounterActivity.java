@@ -7,6 +7,7 @@
 package com.example.embroa.wifisearcher;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -40,9 +41,7 @@ public class StepCounterActivity extends Activity {
         textView = (TextView) findViewById(R.id.text_stepCount);
         textView.setText("");
         findViewById(R.id.stopBtn).setVisibility(View.INVISIBLE);
-        findViewById(R.id.resetBtn).setVisibility(View.INVISIBLE);
-        findViewById(R.id.resumeBtn).setVisibility(View.INVISIBLE);
-        findViewById(R.id.pauseBtn).setVisibility(View.INVISIBLE);
+        //findViewById(R.id.resetBtn).setVisibility(View.INVISIBLE);
 
         if(isStepSensorSupported()) {
             findViewById(R.id.startBtn).setVisibility(View.VISIBLE);
@@ -65,63 +64,47 @@ public class StepCounterActivity extends Activity {
             }
         });
 
-        findViewById(R.id.resetBtn).setOnClickListener(new View.OnClickListener() {
+        /*findViewById(R.id.resetBtn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 resetCounter();
             }
-        });
+        });*/
     }
     protected void startCounter() {
         textView.setText("");
         findViewById(R.id.stopBtn).setVisibility(View.VISIBLE);
-        findViewById(R.id.resetBtn).setVisibility(View.VISIBLE);
-        findViewById(R.id.pauseBtn).setVisibility(View.INVISIBLE);
-        findViewById(R.id.resumeBtn).setVisibility(View.INVISIBLE);
+        //findViewById(R.id.resetBtn).setVisibility(View.VISIBLE);
         findViewById(R.id.startBtn).setVisibility(View.INVISIBLE);
 
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
-        sensorManager.registerListener(sensorEventListener, stepSensor, SensorManager.SENSOR_DELAY_NORMAL);
+        sensorManager.registerListener(sensorEventListener, stepSensor, SensorManager.SENSOR_DELAY_FASTEST);
 
         stepOffset = 0;
     }
 
-    /*protected void resumeCounter() {
-        sensorManager.registerListener(sensorEventListener, stepSensor,
-                SensorManager.SENSOR_DELAY_NORMAL);
-
-        findViewById(R.id.pauseBtn).setVisibility(View.VISIBLE);
-        findViewById(R.id.resumeBtn).setVisibility(View.INVISIBLE);
-    }
-
-    protected void pauseCounter() {
-        sensorManager.unregisterListener(sensorEventListener, stepSensor);
-
-        findViewById(R.id.pauseBtn).setVisibility(View.INVISIBLE);
-        findViewById(R.id.resumeBtn).setVisibility(View.VISIBLE);
-    }*/
-
     protected void stopCounter() {
         sensorManager.unregisterListener(sensorEventListener, stepSensor);
 
-        findViewById(R.id.stopBtn).setVisibility(View.INVISIBLE);
-        findViewById(R.id.resetBtn).setVisibility(View.INVISIBLE);
-        findViewById(R.id.pauseBtn).setVisibility(View.INVISIBLE);
-        findViewById(R.id.resumeBtn).setVisibility(View.INVISIBLE);
-        findViewById(R.id.startBtn).setVisibility(View.VISIBLE);
+        //findViewById(R.id.stopBtn).setVisibility(View.INVISIBLE);
+        //findViewById(R.id.resetBtn).setVisibility(View.INVISIBLE);
+        //findViewById(R.id.startBtn).setVisibility(View.VISIBLE);
+
+        // measure heart rate after moving
+        Intent myIntent = new Intent(this, HeartRateMonitorActivity.class);
+        myIntent.putExtra("isLast", true);
+        /*MainActivity.this.*/startActivity(myIntent);
     }
 
-    protected void resetCounter() {
+    /*protected void resetCounter() {
         sensorManager.unregisterListener(sensorEventListener, stepSensor);
         startCounter();
-    }
+    }*/
 
     public SensorEventListener sensorEventListener = new SensorEventListener() {
         @Override
-        public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
-        }
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
         @Override
         public void onSensorChanged(SensorEvent event) {
