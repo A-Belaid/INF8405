@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.support.v4.app.ActivityCompat;
@@ -15,6 +16,7 @@ import android.telephony.SmsManager;
 import android.text.Html;
 import android.widget.EditText;
 import android.widget.Toast;
+import android.database.sqlite.*;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -69,6 +71,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         longitude = intent.getDoubleExtra("LONG", 0);
 
         favorites = new JSONArray();
+        initFavDatabase();
     }
 
 
@@ -215,7 +218,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 builder.setPositiveButton("Retirer des Favs.", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        favorites.remove(getFavIndex(marker.getTitle()));
+                        removeFromFavs(getFavIndex(marker.getTitle()));
                         marker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.current_wifi));
                     }
                 });
@@ -230,7 +233,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             newFav.put("Caps", getSelectedMarkerScan(marker).capabilities);
                             newFav.put("Lat", latitude);
                             newFav.put("Lng", longitude);
-                            favorites.put(newFav);
+                            addToFavs(newFav);
                             marker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.fav_wifi));
                         } catch (JSONException e) {
 
@@ -306,5 +309,60 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         return false;
+    }
+
+    public void initFavDatabase() {
+        SQLiteDatabase db = openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
+        db.execSQL("CREATE TABLE IF NOT EXISTS FAVORITES(NAME VARCHAR(25)," +
+                "MAC VARCHAR(25)," +
+                "CAPS VARCHAR(255)," +
+                "LAT DOUBLE," +
+                "LNG DOUBLE," +
+                "CONSTRAINT PK_COORDS PRIMARY KEY (LAT, LNG))");
+
+        Cursor favs = db.rawQuery("SELECT * FROM FAVORITES", null);
+        favs.moveToFirst();
+        while(!favs.isAfterLast()) {
+            try {
+                JSONObject oneFav = new JSONObject();
+                oneFav.put("Name", favs.getString(favs.getColumnIndex("NAME")));
+                oneFav.put("Mac", favs.getString(favs.getColumnIndex("MAC")));
+                oneFav.put("Caps", favs.getString(favs.getColumnIndex("CAPS")));
+                oneFav.put("Lat", favs.getDouble(favs.getColumnIndex("LAT")));
+                oneFav.put("Lng", favs.getDouble(favs.getColumnIndex("LNG")));
+                favorites.put(oneFav);
+                favs.moveToNext();
+            } catch(JSONException e) {}
+        }
+
+        db.close();
+    }
+
+    public void addToFavs(JSONObject oneFav) {
+        SQLiteDatabase db = openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
+        try {
+            db.execSQL("INSERT INTO FAVORITES VALUES('" + oneFav.getString("Name") + "','" +
+                    oneFav.getString("Mac") + "','" +
+                    oneFav.getString("Caps") + "'," +
+                    String.valueOf(oneFav.getDouble("Lat")) + "," +
+                    String.valueOf(oneFav.getDouble("Lng")) + ")");
+
+            favorites.put(oneFav);
+        } catch (JSONException e) {}
+
+        db.close();
+    }
+
+    public void removeFromFavs(int favIndex) {
+        try {
+            JSONObject favToDelete = (JSONObject) favorites.get(favIndex);
+            double lat = favToDelete.getDouble("Lat");
+            double lng = favToDelete.getDouble("Lng");
+
+            SQLiteDatabase db = openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
+            db.execSQL("DELETE FROM FAVORITES WHERE LAT = " + String.valueOf(lat) + " AND LNG = " + String.valueOf(lng) + "");
+            favorites.remove(favIndex);
+            db.close();
+        } catch(JSONException e) {}
     }
 }
