@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.BatteryManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -31,10 +30,7 @@ public class BatteryActivity extends AppCompatActivity {
         batteryLevelReceiver = new BroadcastReceiver(){
             @Override
             public void onReceive(Context context, Intent intent){
-                int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-                int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-                float battPct = (level/(float)scale) * 100;
-                BatteryHistory.updateLevel(getProjectDB(), battPct);
+                BatteryHistory.callbackOnReceive(intent, getProjectDB());
             }
         };
         registerReceiver(batteryLevelReceiver, batteryLevelFilter);

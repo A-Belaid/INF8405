@@ -11,7 +11,6 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
-import android.os.BatteryManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
@@ -19,7 +18,6 @@ import android.support.v4.content.ContextCompat;
 import android.telephony.SmsManager;
 import android.text.Html;
 import android.widget.EditText;
-import android.widget.Toast;
 import android.database.sqlite.*;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -35,18 +33,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.util.ArrayList;
-
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -57,8 +44,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private double longitude;
     private ArrayList<LatLng> locations = new ArrayList();
     private JSONArray favorites;
-
-    final private String FAV_SCANS_FILE = "FavScans.json";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,10 +61,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         batteryLevelReceiver = new BroadcastReceiver(){
             @Override
             public void onReceive(Context context, Intent intent){
-                int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-                int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-                float battPct = (level/(float)scale) * 100;
-                BatteryHistory.updateLevel(getProjectDB(), battPct);
+                BatteryHistory.callbackOnReceive(intent, getProjectDB());
             }
         };
 
@@ -338,7 +320,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void initFavDatabase() {
-        SQLiteDatabase db = openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
+        SQLiteDatabase db = getProjectDB();
         db.execSQL("CREATE TABLE IF NOT EXISTS FAVORITES(NAME VARCHAR(25)," +
                 "MAC VARCHAR(25)," +
                 "CAPS VARCHAR(255)," +
@@ -365,7 +347,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void addToFavs(JSONObject oneFav) {
-        SQLiteDatabase db = openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
+        SQLiteDatabase db = getProjectDB();
         try {
             db.execSQL("INSERT INTO FAVORITES VALUES('" + oneFav.getString("Name") + "','" +
                     oneFav.getString("Mac") + "','" +
@@ -385,7 +367,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             double lat = favToDelete.getDouble("Lat");
             double lng = favToDelete.getDouble("Lng");
 
-            SQLiteDatabase db = openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
+            SQLiteDatabase db = getProjectDB();
             db.execSQL("DELETE FROM FAVORITES WHERE LAT = " + String.valueOf(lat) + " AND LNG = " + String.valueOf(lng) + "");
             favorites.remove(favIndex);
             db.close();

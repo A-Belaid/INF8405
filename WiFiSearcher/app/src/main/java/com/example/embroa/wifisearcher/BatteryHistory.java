@@ -1,7 +1,9 @@
 package com.example.embroa.wifisearcher;
 
+import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.*;
+import android.os.BatteryManager;
 
 import java.util.ArrayList;
 
@@ -9,8 +11,6 @@ public class BatteryHistory {
     private long startStamp;
     private float startLevel;
     private float currentLevel;
-    private float lastStartLevel;
-    private float lastEndlevel;
     private String currentActivity;
 
     private final long MILLISECS_IN_SEC = 1000;
@@ -19,8 +19,6 @@ public class BatteryHistory {
     private final long MILLISECS_IN_DAY = 86400000;
 
     private static BatteryHistory battery = new BatteryHistory();
-
-    public static final int DELAY = 3000;
 
     private BatteryHistory() {
         startLevel = -1;
@@ -101,5 +99,13 @@ public class BatteryHistory {
         }
 
         return "Il y a 0 s";
+    }
+
+    public static float callbackOnReceive(Intent intent, SQLiteDatabase projectDB) {
+        int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+        int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+        float battPct = (level/(float)scale) * 100;
+        battery.updateLevel(projectDB, battPct);
+        return battPct;
     }
 }

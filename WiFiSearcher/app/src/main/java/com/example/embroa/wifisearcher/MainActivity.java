@@ -4,7 +4,6 @@ import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.net.wifi.ScanResult;
-import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Handler;
 import android.database.sqlite.*;
@@ -39,7 +38,6 @@ import com.android.volley.toolbox.Volley;
 import com.androidfung.geoip.IpApiService;
 import com.androidfung.geoip.ServicesManager;
 import com.androidfung.geoip.model.GeoIpResponseModel;
-import com.androidfung.geoip.util.Utils;
 import com.google.android.gms.maps.model.LatLng;
 
 
@@ -129,11 +127,7 @@ public class MainActivity extends AppCompatActivity {
         batteryLevelReceiver = new BroadcastReceiver(){
             @Override
             public void onReceive(Context context, Intent intent){
-                int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-                int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-                float battPct = (level/(float)scale) * 100;
-                BatteryHistory.updateLevel(getProjectDB(), battPct);
-                thisActivity.setTitle("Wifi Searcher (" + String.valueOf(battPct) + "%)");
+                thisActivity.setTitle("Wifi Searcher (" + String.valueOf(BatteryHistory.callbackOnReceive(intent, getProjectDB())) + "%)");
             }
         };
 
@@ -364,7 +358,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void initBatteryDB() {
-        SQLiteDatabase db = openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
+        SQLiteDatabase db = getProjectDB();
         db.execSQL("CREATE TABLE IF NOT EXISTS BATTERY(TIMESTAMP BIGINT," +
                 "ACTIVITY VARCHAR(25)," +
                 "DELTA FLOAT)");
@@ -373,7 +367,7 @@ public class MainActivity extends AppCompatActivity {
 
     //For debug only!
     public void dropBatteryDB() {
-        SQLiteDatabase db = openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
+        SQLiteDatabase db = getProjectDB();
         db.execSQL("DROP TABLE BATTERY");
         db.close();
     }
