@@ -7,6 +7,7 @@ import android.net.wifi.ScanResult;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Handler;
+import android.database.sqlite.*;
 
 import android.support.annotation.RequiresApi;
 import android.support.v7.app.AlertDialog;
@@ -120,6 +121,9 @@ public class MainActivity extends AppCompatActivity {
         final IntentFilter batteryLevelFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
         BroadcastReceiver batteryLevelReceiver;
 
+        //dropBatteryDB();
+        initBatteryDB();
+        BatteryHistory.initHistory("MainActivity");
         final MainActivity thisActivity = this;
         batteryLevelReceiver = new BroadcastReceiver(){
             @Override
@@ -127,6 +131,7 @@ public class MainActivity extends AppCompatActivity {
                 int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
                 int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
                 float battPct = (level/(float)scale) * 100;
+                BatteryHistory.updateLevel(battPct);
                 thisActivity.setTitle("Wifi Searcher (" + String.valueOf(battPct) + "%)");
             }
         };
@@ -162,6 +167,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onStop()
     {
         unregisterReceiver(wifiReceiver);
+        BatteryHistory.endHistory(getProjectDB());
         super.onStop();
     }
 
@@ -172,6 +178,7 @@ public class MainActivity extends AppCompatActivity {
         super.onRestart();
         registerReceiver(wifiReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
         scanWifi();
+        BatteryHistory.initHistory("MainActivity");
     }
 
     //Displays an alert containing all relevant infos related to a selected scanned network
@@ -349,5 +356,24 @@ public class MainActivity extends AppCompatActivity {
             hotspotInstance.put("macAddress", macAddress);
             hotspotsArray.put(hotspotInstance);
         }
+    }
+
+    public void initBatteryDB() {
+        SQLiteDatabase db = openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
+        db.execSQL("CREATE TABLE IF NOT EXISTS BATTERY(TIMESTAMP BIGINT," +
+                "ACTIVITY VARCHAR(25)," +
+                "DELTA FLOAT)");
+        db.close();
+    }
+
+    //For debug only!
+    public void dropBatteryDB() {
+        SQLiteDatabase db = openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
+        db.execSQL("DROP TABLE BATTERY");
+        db.close();
+    }
+
+    public SQLiteDatabase getProjectDB() {
+        return openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
     }
 }

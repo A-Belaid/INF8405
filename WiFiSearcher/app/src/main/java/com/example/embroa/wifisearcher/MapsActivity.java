@@ -2,12 +2,16 @@ package com.example.embroa.wifisearcher;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
+import android.os.BatteryManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
@@ -65,6 +69,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+        final IntentFilter batteryLevelFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        BroadcastReceiver batteryLevelReceiver;
+
+        BatteryHistory.initHistory("MapsActivity");
+        batteryLevelReceiver = new BroadcastReceiver(){
+            @Override
+            public void onReceive(Context context, Intent intent){
+                int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+                float battPct = (level/(float)scale) * 100;
+                BatteryHistory.updateLevel(battPct);
+            }
+        };
+
+        registerReceiver(batteryLevelReceiver, batteryLevelFilter);
+
         Intent intent = getIntent();
         netName = intent.getStringExtra("NAME");
         latitude = intent.getDoubleExtra("LAT", 0);
@@ -74,6 +94,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         initFavDatabase();
     }
 
+    @Override
+    protected void onStop()
+    {
+        BatteryHistory.endHistory(getProjectDB());
+        super.onStop();
+    }
+
+    @Override
+    protected void onRestart()
+    {
+        super.onRestart();
+        BatteryHistory.initHistory("MapsActivity");
+    }
 
     /**
      * Manipulates the map once available.
@@ -364,5 +397,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             favorites.remove(favIndex);
             db.close();
         } catch(JSONException e) {}
+    }
+
+    public SQLiteDatabase getProjectDB() {
+        return openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
     }
 }
