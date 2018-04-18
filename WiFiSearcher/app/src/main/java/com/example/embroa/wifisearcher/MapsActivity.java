@@ -79,7 +79,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
                 int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
                 float battPct = (level/(float)scale) * 100;
-                BatteryHistory.updateLevel(battPct);
+                BatteryHistory.updateLevel(getProjectDB(), battPct);
             }
         };
 
@@ -92,13 +92,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         favorites = new JSONArray();
         initFavDatabase();
-    }
-
-    @Override
-    protected void onStop()
-    {
-        BatteryHistory.endHistory(getProjectDB());
-        super.onStop();
     }
 
     @Override

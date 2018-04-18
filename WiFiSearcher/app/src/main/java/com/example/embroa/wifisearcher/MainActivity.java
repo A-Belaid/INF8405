@@ -39,6 +39,7 @@ import com.android.volley.toolbox.Volley;
 import com.androidfung.geoip.IpApiService;
 import com.androidfung.geoip.ServicesManager;
 import com.androidfung.geoip.model.GeoIpResponseModel;
+import com.androidfung.geoip.util.Utils;
 import com.google.android.gms.maps.model.LatLng;
 
 
@@ -131,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
                 int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
                 int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
                 float battPct = (level/(float)scale) * 100;
-                BatteryHistory.updateLevel(battPct);
+                BatteryHistory.updateLevel(getProjectDB(), battPct);
                 thisActivity.setTitle("Wifi Searcher (" + String.valueOf(battPct) + "%)");
             }
         };
@@ -167,7 +168,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onStop()
     {
         unregisterReceiver(wifiReceiver);
-        BatteryHistory.endHistory(getProjectDB());
         super.onStop();
     }
 
@@ -176,9 +176,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onRestart()
     {
         super.onRestart();
+        BatteryHistory.initHistory("MainActivity");
         registerReceiver(wifiReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
         scanWifi();
-        BatteryHistory.initHistory("MainActivity");
     }
 
     //Displays an alert containing all relevant infos related to a selected scanned network
@@ -227,7 +227,12 @@ public class MainActivity extends AppCompatActivity {
                         startActivity(toMapIntent);
                     }
                 })
-                .setNegativeButton("Retour", null);
+                .setNegativeButton("Voir Batterie", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        startActivity(new Intent(thisActivity, BatteryActivity.class));
+                    }
+                });
         builder.create().show();
     }
 
