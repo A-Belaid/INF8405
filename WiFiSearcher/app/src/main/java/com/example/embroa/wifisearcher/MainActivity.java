@@ -65,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
     JSONArray hotspotsArray;
     private final Handler scanHandler = new Handler();
     static final int LOCATION_PERMISSION_REQUEST = 1;
+    static final int BODY_SENSORS_PERMISSION_REQUEST = 2;
     Integer scanDelay = 1000;
     GeoData geoData;
     boolean isFirstScan;
@@ -117,6 +118,10 @@ public class MainActivity extends AppCompatActivity {
             scanWifi();
         }
 
+        if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.BODY_SENSORS}, BODY_SENSORS_PERMISSION_REQUEST);
+        }
+
         final IntentFilter batteryLevelFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
         BroadcastReceiver batteryLevelReceiver;
 
@@ -132,6 +137,13 @@ public class MainActivity extends AppCompatActivity {
         };
 
         registerReceiver(batteryLevelReceiver, batteryLevelFilter);
+
+        findViewById(R.id.showStepCounterBtn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showStepCounterActivity(v);
+            }
+        });
     }
 
     //Check the request result
@@ -141,6 +153,11 @@ public class MainActivity extends AppCompatActivity {
             case LOCATION_PERMISSION_REQUEST: {
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
                     scanWifi();
+            }
+            case BODY_SENSORS_PERMISSION_REQUEST: {
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // nothing for now
+                }
             }
         }
     }
@@ -374,5 +391,12 @@ public class MainActivity extends AppCompatActivity {
 
     public SQLiteDatabase getProjectDB() {
         return openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
+    }
+
+    public void showStepCounterActivity(View v) {
+        // measure heart rate before moving
+        Intent myIntent = new Intent(this, HeartRateMonitorActivity.class);
+        myIntent.putExtra("isLast", false);
+        /*MainActivity.this.*/startActivity(myIntent);
     }
 }
