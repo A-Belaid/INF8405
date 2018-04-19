@@ -5,8 +5,12 @@ package com.example.embroa.wifisearcher;
  */
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.database.sqlite.SQLiteDatabase;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -30,6 +34,19 @@ public class HeartRateMonitorActivity extends Activity {
         startMonitor();
         findViewById(R.id.okBtn).setVisibility(View.INVISIBLE);
 
+        final IntentFilter batteryLevelFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        BroadcastReceiver batteryLevelReceiver;
+
+        BatteryHistory.initHistory("HeartRateActivity");
+        batteryLevelReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                BatteryHistory.callbackOnReceive(intent, getProjectDB());
+            }
+        };
+
+        registerReceiver(batteryLevelReceiver, batteryLevelFilter);
+
         findViewById(R.id.okBtn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -37,6 +54,13 @@ public class HeartRateMonitorActivity extends Activity {
             }
         });
     }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        BatteryHistory.initHistory("HeartRateActivity");
+    }
+
     protected void startMonitor() {
         textView.setText("");
 
@@ -96,4 +120,8 @@ public class HeartRateMonitorActivity extends Activity {
             }
         }
     };
+
+    public SQLiteDatabase getProjectDB() {
+        return openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
+    }
 }

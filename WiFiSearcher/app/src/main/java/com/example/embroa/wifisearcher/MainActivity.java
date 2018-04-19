@@ -71,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
     GeoData geoData;
     boolean isFirstScan;
 
-    long startBandStamp;
+    private long startBandStamp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -248,7 +248,7 @@ public class MainActivity extends AppCompatActivity {
                         startActivity(toMapIntent);
                     }
                 })
-                .setNegativeButton("Voir Batterie", new DialogInterface.OnClickListener() {
+                .setNegativeButton("Voir ressources", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         startActivity(new Intent(thisActivity, BatteryActivity.class));

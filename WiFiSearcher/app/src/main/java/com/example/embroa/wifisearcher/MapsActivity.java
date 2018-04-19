@@ -11,6 +11,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.location.Location;
+import android.net.TrafficStats;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.support.v4.app.ActivityCompat;
@@ -91,6 +92,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Marker selectedMarker;
     private Polyline polyLinePath;
 
+    private long startBandStamp;
+
 
     @SuppressLint("MissingPermission")
     @Override
@@ -114,6 +117,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         };
 
         registerReceiver(batteryLevelReceiver, batteryLevelFilter);
+
+        startBandStamp = BandwidthHistory.initHistory(getProjectDB(), "MapsActivity", TrafficStats.getUidTxBytes(android.os.Process.myUid()),
+                TrafficStats.getUidRxBytes(android.os.Process.myUid()));
 
         Intent intent = getIntent();
         netName = intent.getStringExtra("NAME");
@@ -156,9 +162,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     @Override
+    protected void onStop()
+    {
+        BandwidthHistory.endHistory(getProjectDB(), startBandStamp, TrafficStats.getUidTxBytes(android.os.Process.myUid()),
+                TrafficStats.getUidRxBytes(android.os.Process.myUid()));
+        super.onStop();
+    }
+
+    @Override
     protected void onRestart() {
         super.onRestart();
         BatteryHistory.initHistory("MapsActivity");
+        startBandStamp = BandwidthHistory.initHistory(getProjectDB(), "MapsActivity", TrafficStats.getUidTxBytes(android.os.Process.myUid()),
+                TrafficStats.getUidRxBytes(android.os.Process.myUid()));
     }
 
     /**

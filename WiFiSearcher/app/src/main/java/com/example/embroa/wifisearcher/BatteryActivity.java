@@ -15,9 +15,12 @@ import java.util.ArrayList;
 
 public class BatteryActivity extends AppCompatActivity {
     private ListView batteryView;
+    private ListView bandwidthView;
 
-    private ArrayList<String> history;
-    private ArrayAdapter<String> adapter;
+    private ArrayList<String> batteryHistory;
+    private ArrayAdapter<String> batteryAdapter;
+    private ArrayList<String> bandwidthHistory;
+    private ArrayAdapter<String> bandwidthAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,14 +38,19 @@ public class BatteryActivity extends AppCompatActivity {
         };
         registerReceiver(batteryLevelReceiver, batteryLevelFilter);
 
-        this.setTitle("Historique Batterie");
+        this.setTitle("Historique Ressources");
 
         batteryView = (ListView) findViewById(R.id.batteryView);
+        bandwidthView = (ListView) findViewById(R.id.bandwidthView);
 
-        history = new ArrayList<String>();
-        adapter = null;
+        batteryHistory = new ArrayList<String>();
+        batteryAdapter = null;
+
+        bandwidthHistory = new ArrayList<String>();
+        bandwidthAdapter = null;
 
         updateBatteryView();
+        updateBandwidthView();
     }
 
     @Override
@@ -58,24 +66,46 @@ public class BatteryActivity extends AppCompatActivity {
     }
 
     public void updateBatteryView() {
-        history.clear();
+        batteryHistory.clear();
         ArrayList<String> dbHistory = BatteryHistory.getHistory(getProjectDB());
 
         for(String iter: dbHistory)
-            history.add(iter);
+            batteryHistory.add(iter);
 
         if(batteryView.getAdapter() == null) {
-            adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, history);
-            batteryView.setAdapter(adapter);
+            batteryAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, batteryHistory);
+            batteryView.setAdapter(batteryAdapter);
         } else {
             int listEndPos = batteryView.getLastVisiblePosition();
-            adapter.notifyDataSetChanged();
+            batteryAdapter.notifyDataSetChanged();
             batteryView.setVerticalScrollbarPosition(listEndPos);
         }
     }
 
-    public void clearHistory(View view) {
+    public void clearBatteryHistory(View view) {
         BatteryHistory.clearHistory(getProjectDB());
         updateBatteryView();
+    }
+
+    public void updateBandwidthView() {
+        bandwidthHistory.clear();
+        ArrayList<String> dbHistory = BandwidthHistory.getHistory(getProjectDB());
+
+        for(String iter: dbHistory)
+            bandwidthHistory.add(iter);
+
+        if(bandwidthView.getAdapter() == null) {
+            bandwidthAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, bandwidthHistory);
+            bandwidthView.setAdapter(bandwidthAdapter);
+        } else {
+            int listEndPos = bandwidthView.getLastVisiblePosition();
+            bandwidthAdapter.notifyDataSetChanged();
+            bandwidthView.setVerticalScrollbarPosition(listEndPos);
+        }
+    }
+
+    public void clearBandwidthHistory(View view) {
+        BandwidthHistory.clearHistory(getProjectDB());
+        updateBandwidthView();
     }
 }

@@ -13,10 +13,10 @@ public class BatteryHistory {
     private float currentLevel;
     private String currentActivity;
 
-    private final long MILLISECS_IN_SEC = 1000;
-    private final long MILLISECS_IN_MIN = 60000;
-    private final long MILLISECS_IN_HOUR = 3600000;
-    private final long MILLISECS_IN_DAY = 86400000;
+    private final static long MILLISECS_IN_SEC = 1000;
+    private final static long MILLISECS_IN_MIN = 60000;
+    private final static long MILLISECS_IN_HOUR = 3600000;
+    private final static long MILLISECS_IN_DAY = 86400000;
 
     private static BatteryHistory battery = new BatteryHistory();
 
@@ -77,7 +77,7 @@ public class BatteryHistory {
         projectDB.close();
     }
 
-    private String convertDeltaStamp(long deltaStamp) {
+    public static String convertDeltaStamp(long deltaStamp) {
         if(deltaStamp >= MILLISECS_IN_DAY) {
             long deltaDays = deltaStamp / MILLISECS_IN_SEC;
             return "Il y a " + String.valueOf(deltaDays) + " j";
