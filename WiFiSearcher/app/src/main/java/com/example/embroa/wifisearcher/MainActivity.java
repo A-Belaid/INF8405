@@ -103,9 +103,9 @@ public class MainActivity extends AppCompatActivity {
         wifiReceiver = new Receiver();
         registerReceiver(wifiReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
 
-        int permissionCheck = ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION);
+        int permissionCheck = ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION);
         if(permissionCheck != PackageManager.PERMISSION_GRANTED)
-            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, LOCATION_PERMISSION_REQUEST);
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST);
         else
         {
             geoData = new GeoData();
@@ -143,13 +143,6 @@ public class MainActivity extends AppCompatActivity {
 
         startBandStamp = BandwidthHistory.initHistory(getProjectDB(), "MainActivity", TrafficStats.getUidTxBytes(android.os.Process.myUid()),
                 TrafficStats.getUidRxBytes(android.os.Process.myUid()));
-
-        findViewById(R.id.showStepCounterBtn).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showStepCounterActivity(v);
-            }
-        });
     }
 
     //Check the request result
@@ -411,12 +404,5 @@ public class MainActivity extends AppCompatActivity {
 
     public SQLiteDatabase getProjectDB() {
         return openOrCreateDatabase("INF8405", MODE_PRIVATE, null);
-    }
-
-    public void showStepCounterActivity(View v) {
-        // measure heart rate before moving
-        Intent myIntent = new Intent(this, HeartRateMonitorActivity.class);
-        myIntent.putExtra("isLast", false);
-        /*MainActivity.this.*/startActivity(myIntent);
     }
 }

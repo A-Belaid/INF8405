@@ -24,6 +24,7 @@ public class HeartRateMonitorActivity extends Activity {
     private Sensor heartRateSensor;
     private TextView textView;
     private int timesChanged = 0;
+    private String heartRateValue;
     private boolean isDone = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,7 +69,7 @@ public class HeartRateMonitorActivity extends Activity {
         heartRateSensor = sensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE);
 
         if(heartRateSensor != null)
-            textView.setText("Appuyer votre doigt sur le capteur près de la caméra arrière pour mesurer votre rythme cardiaque.");
+            textView.setText("Appuyer votre doigt sur le capteur près de la caméra arrière.");
         else
             textView.setText("Erreur: capteur indisponible.");
 
@@ -81,15 +82,17 @@ public class HeartRateMonitorActivity extends Activity {
         Intent previousIntent = getIntent();
 
         Boolean isLast = previousIntent.getBooleanExtra("isLast", false);
+        Intent returnIntent = new Intent();
         if (isLast){
-            // Go back to main menu after last measure
-            nextIntent = new Intent(this, MainActivity.class);
+            // Return last measure
+            returnIntent.putExtra("lastHeartRate",heartRateValue);
         } else {
-            // Start StepCounter after first measure
-            nextIntent = new Intent(this, StepCounterActivity.class);
+            // Return first measure
+            returnIntent.putExtra("firstHeartRate",heartRateValue);
         }
+        setResult(Activity.RESULT_OK,returnIntent);
+        finish();
 
-        /*MainActivity.this.*/startActivity(nextIntent);
     }
 
     public SensorEventListener sensorEventListener = new SensorEventListener() {
@@ -105,13 +108,16 @@ public class HeartRateMonitorActivity extends Activity {
                 float heartRate = event.values[0];
                 if(!isDone) {
                     if (heartRate == 0) {
-                        textView.setText("Calcul en cours. Gardez votre doigt sur le capteur...");
+                        textView.setTextSize(24);
+                        textView.setText("Calcul en cours.\nGardez votre doigt sur le capteur");
                         timesChanged = 0;
                     } else {
-                        textView.setText("Rythme cardiaque: " + (int) heartRate);
+                        textView.setText(""+(int) heartRate);
+                        textView.setTextSize(64);
                         timesChanged++;
 
                         if (timesChanged > 10) {
+                            heartRateValue = Float.toString(heartRate);
                             isDone = true;
                             findViewById(R.id.okBtn).setVisibility(View.VISIBLE);
                         }

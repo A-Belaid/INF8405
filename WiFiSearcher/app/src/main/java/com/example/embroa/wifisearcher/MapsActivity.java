@@ -2,6 +2,7 @@ package com.example.embroa.wifisearcher;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -10,8 +11,14 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.location.Location;
 import android.net.TrafficStats;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.support.v4.app.ActivityCompat;
@@ -25,9 +32,6 @@ import android.widget.EditText;
 import android.database.sqlite.*;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -57,19 +61,13 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
 
 import com.google.android.gms.location.LocationServices;
 
-import android.location.Location;
-
 import com.google.android.gms.tasks.*;
 
-import android.support.annotation.NonNull;
 import android.widget.Toast;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
@@ -81,16 +79,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private double longitude;
     private ArrayList<LatLng> locations = new ArrayList();
     private JSONArray favorites;
+    private String lastHeartRate;
+    private String nSteps;
+    private float stepOffset;
+    private float selectedMarkerLatitude;
+    private float selectedMarkerLongitude;
+    private SensorManager sensorManager;
+    private Sensor stepSensor;
+    private boolean monitorIsStarted = false;
 
     final private String FAV_SCANS_FILE = "FavScans.json";
 
     private FusedLocationProviderClient mFusedLocationClient;
     private Location mLastKnownLocation;
     private Marker userMarker;
-    private LocationCallback mLocationCallback;
-    private LocationRequest mLocationRequest;
     private Marker selectedMarker;
     private Polyline polyLinePath;
+    private LocationManager locationManager;
+
+    public static boolean approximatelyEqual(float actualValue, float desiredValue, float tolerancePercentage) {
+        float diff = Math.abs(desiredValue - actualValue);
+        float tolerance = tolerancePercentage/100 * desiredValue;
+        return diff < Math.abs(tolerance);
+    }
 
     private long startBandStamp;
 
@@ -136,28 +147,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // Construct a FusedLocationProviderClient.
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        //Location request
-        mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(1000);
-        mLocationRequest.setFastestInterval(500);
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY); // PRIORITY_HIGH_ACCURACY crashed the app, ACCESS_FINE_LOCATION
-
-        //Location callback
-        mLocationCallback = new LocationCallback() {
-            @Override
-            public void onLocationResult(LocationResult locationResult) {
-                if (locationResult == null) {
-                    return;
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        // Define a listener that responds to location updates
+        LocationListener locationListener = new LocationListener() {
+            public void onLocationChanged(Location location) {
+                // Called when a new location is found by the network location provider.
+                if (stepSensor != null
+                        && selectedMarker != null
+                        && !monitorIsStarted
+                        && approximatelyEqual((float) location.getLatitude(), selectedMarkerLatitude, (float)0.0001)
+                        && approximatelyEqual((float) location.getLongitude(), selectedMarkerLongitude, (float)0.0001)) {
+                    monitorIsStarted = true;
+                    Toast.makeText(getApplicationContext(), "Arrivé à destination", Toast.LENGTH_LONG).show();
+                    stopCounter();
                 }
-                for (Location location : locationResult.getLocations()) {
-                    // Update UI with location data
-                    if (mLastKnownLocation != location) {
-                        mLastKnownLocation = location;
-                        userMarker.setPosition(new LatLng(mLastKnownLocation.getLatitude(), mLastKnownLocation.getLongitude()));
-                    }
+                if (location != null) {
+                    userMarker.setPosition(new LatLng(location.getLatitude(), location.getLongitude()));
                 }
             }
+
+            public void onStatusChanged(String provider, int status, Bundle extras) {}
+
+            public void onProviderEnabled(String provider) {}
+
+            public void onProviderDisabled(String provider) {}
         };
+
+        // Register the listener with the Location Manager to receive location updates
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
 
     }
 
@@ -204,8 +221,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         for (ScanResult wifiResult : MainActivity.wifiResults) {
             String wifiName = "\"" + wifiResult.SSID + "\"";
             if (!wifiName.equals(netName)) {
-                randLat += (Math.random() * 2 - 1) / 1000;
-                randLng += (Math.random() * 2 - 1) / 500;
+                randLat += (Math.random() * 2 - 1) / 10000; // 1000
+                randLng += (Math.random() * 2 - 1) / 5000; // 500
                 LatLng netcoords = new LatLng(randLat, randLng);
                 boolean isNetworkPrivate = wifiResult.capabilities.contains("WPA") || wifiResult.capabilities.contains("TKIP");
                 int signalLevel = WifiManager.calculateSignalLevel(wifiResult.level, 3);
@@ -254,16 +271,26 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     selectedMarker.hideInfoWindow();
 
                     selectedMarker = marker;
+                    selectedMarkerLatitude = (float) selectedMarker.getPosition().latitude;
+                    selectedMarkerLongitude = (float) selectedMarker.getPosition().longitude;
                     drawPath(selectedMarker);
 
                     marker.showInfoWindow();
+
+                    // Measure heart rate
+                    showHeartRateMonitorActivity();
 
                 }//If no marker is already selected
                 else if(!marker.equals(selectedMarker)) {
                     selectedMarker = marker;
+                    selectedMarkerLatitude = (float) selectedMarker.getPosition().latitude;
+                    selectedMarkerLongitude = (float) selectedMarker.getPosition().longitude;
                     drawPath(selectedMarker);
 
                     marker.showInfoWindow();
+
+                    // Measure heart rate
+                    showHeartRateMonitorActivity();
                 }
                 return true;
             }
@@ -281,8 +308,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         }
                     }
                 });
-
-        mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, null /* Looper */);
     }
 
     public int getMarkerColor(boolean isLocked, int signalLevel) {
@@ -662,4 +687,63 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         return data;
     }
+
+    public void showHeartRateMonitorActivity() {
+        Intent secondIntent = new Intent(this, HeartRateMonitorActivity.class);
+        secondIntent.putExtra("isLast", false);
+        startActivityForResult(secondIntent, 1);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == 1) {
+            drawPath(selectedMarker);
+            monitorIsStarted = false;
+            if(resultCode == Activity.RESULT_OK){
+                lastHeartRate = null;
+                startCounter();
+            }
+        } else if (requestCode == 2) {
+            if(resultCode == Activity.RESULT_OK){
+                lastHeartRate = data.getStringExtra("lastHeartRate");
+
+                Toast.makeText(getApplicationContext(), "Nombre de pas: " + nSteps, Toast.LENGTH_LONG).show();
+
+                Intent nextIntent = new Intent(this, MainActivity.class);
+                startActivity(nextIntent);
+            }
+        }
+    }
+
+    protected void startCounter() {
+        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
+        sensorManager.registerListener(sensorEventListener, stepSensor, SensorManager.SENSOR_DELAY_FASTEST);
+
+        stepOffset = 0;
+    }
+
+    protected void stopCounter() {
+        sensorManager.unregisterListener(sensorEventListener, stepSensor);
+
+        // measure heart rate after moving
+        if (lastHeartRate == null) {
+            Intent secondIntent = new Intent(this, HeartRateMonitorActivity.class);
+            secondIntent.putExtra("isLast", true);
+            startActivityForResult(secondIntent, 2);
+        }
+    }
+
+    public SensorEventListener sensorEventListener = new SensorEventListener() {
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+            if (stepOffset == 0) {
+                stepOffset = event.values[0];
+            }
+            nSteps = Float.toString(event.values[0] - stepOffset);
+        }
+    };
 }
