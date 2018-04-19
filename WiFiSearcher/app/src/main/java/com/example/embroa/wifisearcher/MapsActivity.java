@@ -2,6 +2,7 @@ package com.example.embroa.wifisearcher;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -21,6 +22,7 @@ import android.support.v4.content.ContextCompat;
 import android.telephony.SmsManager;
 import android.text.Html;
 import android.util.Log;
+import android.view.View;
 import android.widget.EditText;
 import android.database.sqlite.*;
 
@@ -258,12 +260,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                     marker.showInfoWindow();
 
+                    // TODO: measure heart rate
+
                 }//If no marker is already selected
                 else if(!marker.equals(selectedMarker)) {
                     selectedMarker = marker;
                     drawPath(selectedMarker);
 
                     marker.showInfoWindow();
+
+                    // Measure heart rate
+                    showHeartRateMonitorActivity();
                 }
                 return true;
             }
@@ -661,5 +668,26 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             urlConnection.disconnect();
         }
         return data;
+    }
+
+    public void showHeartRateMonitorActivity() {
+        Intent secondIntent = new Intent(this, HeartRateMonitorActivity.class);
+        secondIntent.putExtra("isLast", false);
+        startActivityForResult(secondIntent, 1);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+
+        if (requestCode == 1) {
+            if(resultCode == Activity.RESULT_OK){
+                String firstHeartRate=data.getStringExtra("firstHeartRate");
+                // TODO: save firstHeartRate to DB
+                // TODO: start stepCounter
+            }
+            if (resultCode == Activity.RESULT_CANCELED) {
+                //Write your code if there's no result
+            }
+        }
     }
 }
