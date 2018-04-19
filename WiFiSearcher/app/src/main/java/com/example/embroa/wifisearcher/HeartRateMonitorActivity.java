@@ -69,7 +69,7 @@ public class HeartRateMonitorActivity extends Activity {
         heartRateSensor = sensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE);
 
         if(heartRateSensor != null)
-            textView.setText("Appuyer votre doigt sur le capteur près de la caméra arrière pour mesurer votre rythme cardiaque.");
+            textView.setText("Appuyer votre doigt sur le capteur près de la caméra arrière.");
         else
             textView.setText("Erreur: capteur indisponible.");
 
@@ -108,10 +108,12 @@ public class HeartRateMonitorActivity extends Activity {
                 float heartRate = event.values[0];
                 if(!isDone) {
                     if (heartRate == 0) {
-                        textView.setText("Calcul en cours. Gardez votre doigt sur le capteur...");
+                        textView.setTextSize(24);
+                        textView.setText("Calcul en cours.\nGardez votre doigt sur le capteur");
                         timesChanged = 0;
                     } else {
-                        textView.setText("Rythme cardiaque: " + (int) heartRate);
+                        textView.setText(""+(int) heartRate);
+                        textView.setTextSize(64);
                         timesChanged++;
 
                         if (timesChanged > 10) {
