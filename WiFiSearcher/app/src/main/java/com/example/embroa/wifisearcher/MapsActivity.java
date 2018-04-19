@@ -69,6 +69,7 @@ import android.location.Location;
 import com.google.android.gms.tasks.*;
 
 import android.support.annotation.NonNull;
+import android.widget.Toast;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -560,7 +561,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         @Override
         protected void onPostExecute(String result) {
             super.onPostExecute(result);
-            new ParserTask().execute(result);
+            if (result.contains("error_message"))
+                Toast.makeText(getApplicationContext(), "Google API Error: Daily quota for Itinerary API has been exceeded.", Toast.LENGTH_SHORT).show();
+            else
+                new ParserTask().execute(result);
         }
     }
 
