@@ -3,6 +3,7 @@ package com.example.embroa.wifisearcher;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.net.TrafficStats;
 import android.net.wifi.ScanResult;
 import android.os.Build;
 import android.os.Handler;
@@ -69,6 +70,8 @@ public class MainActivity extends AppCompatActivity {
     GeoData geoData;
     boolean isFirstScan;
 
+    long startBandStamp;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -121,7 +124,7 @@ public class MainActivity extends AppCompatActivity {
         BroadcastReceiver batteryLevelReceiver;
 
         //dropBatteryDB();
-        initBatteryDB();
+        initDatabase();
         BatteryHistory.initHistory("MainActivity");
         final MainActivity thisActivity = this;
         batteryLevelReceiver = new BroadcastReceiver(){
@@ -132,6 +135,9 @@ public class MainActivity extends AppCompatActivity {
         };
 
         registerReceiver(batteryLevelReceiver, batteryLevelFilter);
+
+        startBandStamp = BandwidthHistory.initHistory(getProjectDB(), "MainActivity", TrafficStats.getUidTxBytes(android.os.Process.myUid()),
+                TrafficStats.getUidRxBytes(android.os.Process.myUid()));
     }
 
     //Check the request result
@@ -162,6 +168,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onStop()
     {
         unregisterReceiver(wifiReceiver);
+        BandwidthHistory.endHistory(getProjectDB(), startBandStamp, TrafficStats.getUidTxBytes(android.os.Process.myUid()),
+                TrafficStats.getUidRxBytes(android.os.Process.myUid()));
         super.onStop();
     }
 
@@ -171,6 +179,8 @@ public class MainActivity extends AppCompatActivity {
     {
         super.onRestart();
         BatteryHistory.initHistory("MainActivity");
+        startBandStamp = BandwidthHistory.initHistory(getProjectDB(), "MainActivity", TrafficStats.getUidTxBytes(android.os.Process.myUid()),
+                TrafficStats.getUidRxBytes(android.os.Process.myUid()));
         registerReceiver(wifiReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
         scanWifi();
     }
@@ -357,11 +367,15 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void initBatteryDB() {
+    public void initDatabase() {
         SQLiteDatabase db = getProjectDB();
         db.execSQL("CREATE TABLE IF NOT EXISTS BATTERY(TIMESTAMP BIGINT," +
                 "ACTIVITY VARCHAR(25)," +
                 "DELTA FLOAT)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS BANDWIDTH(TIMESTAMP BIGINT," +
+                "ACTIVITY VARCHAR(25)," +
+                "DELTA_TX BIGINT," +
+                "DELTA_RX BIGINT)");
         db.close();
     }
 
@@ -369,6 +383,12 @@ public class MainActivity extends AppCompatActivity {
     public void dropBatteryDB() {
         SQLiteDatabase db = getProjectDB();
         db.execSQL("DROP TABLE BATTERY");
+        db.close();
+    }
+
+    public void dropBandwidthDB() {
+        SQLiteDatabase db = getProjectDB();
+        db.execSQL("DROP TABLE BANDWIDTH");
         db.close();
     }
 
