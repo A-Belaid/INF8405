@@ -225,8 +225,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if(marker.equals(selectedMarker)) {
                     selectedMarker = null;
 
-                    polyLinePath.remove();
-                    polyLinePath = null;
+                    if(polyLinePath != null) {
+                        polyLinePath.remove();
+                        polyLinePath = null;
+                    }
 
                     marker.hideInfoWindow();
                 }//If a marker is already selected and user clicks on another marker
