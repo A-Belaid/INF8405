@@ -69,6 +69,7 @@ import android.location.Location;
 import com.google.android.gms.tasks.*;
 
 import android.support.annotation.NonNull;
+import android.widget.Toast;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -133,7 +134,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mLocationRequest = new LocationRequest();
         mLocationRequest.setInterval(1000);
         mLocationRequest.setFastestInterval(500);
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY); // PRIORITY_HIGH_ACCURACY crashed the app, ACCESS_FINE_LOCATION
 
         //Location callback
         mLocationCallback = new LocationCallback() {
@@ -224,8 +225,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if(marker.equals(selectedMarker)) {
                     selectedMarker = null;
 
-                    polyLinePath.remove();
-                    polyLinePath = null;
+                    if(polyLinePath != null) {
+                        polyLinePath.remove();
+                        polyLinePath = null;
+                    }
 
                     marker.hideInfoWindow();
                 }//If a marker is already selected and user clicks on another marker
@@ -560,7 +563,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         @Override
         protected void onPostExecute(String result) {
             super.onPostExecute(result);
-            new ParserTask().execute(result);
+            if (result.contains("error_message"))
+                Toast.makeText(getApplicationContext(), "Google API Error: Daily quota for Itinerary API has been exceeded.", Toast.LENGTH_SHORT).show();
+            else
+                new ParserTask().execute(result);
         }
     }
 

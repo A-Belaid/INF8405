@@ -9,10 +9,12 @@
     <uses-permission android:name="android.permission.WRITE_INTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_INTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.SEND_SMS" />
-
     <uses-permission android:name="com.javapapers.android.maps.path.permission.MAPS_RECEIVE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="com.google.android.providers.gsf.permission.READ_GSERVICES" />
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+
+    <uses-feature android:name="android.hardware.sensor.stepcounter" />
 
     <!--
          The ACCESS_COARSE/FINE_LOCATION permissions are not required to use
@@ -47,6 +49,13 @@
             android:name=".MapsActivity"
             android:label="@string/title_activity_maps" />
         <activity android:name=".BatteryActivity"></activity>
+        <activity
+            android:name=".StepCounterActivity"
+            android:label="StepCounter"></activity>
+
+        <activity
+            android:name=".HeartRateMonitorActivity"
+            android:label="HeartRateMonitor"></activity>
     </application>
 
 </manifest>
