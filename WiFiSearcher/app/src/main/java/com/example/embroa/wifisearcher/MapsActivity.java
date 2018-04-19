@@ -11,6 +11,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.location.Location;
 import android.net.TrafficStats;
 import android.net.wifi.ScanResult;
@@ -83,6 +87,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private double longitude;
     private ArrayList<LatLng> locations = new ArrayList();
     private JSONArray favorites;
+    private String firstHeartRate;
+    private String lastHeartRate;
+    private String nSteps;
+    private float stepOffset;
+    private SensorManager sensorManager;
+    private Sensor stepSensor;
 
     final private String FAV_SCANS_FILE = "FavScans.json";
 
@@ -260,7 +270,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                     marker.showInfoWindow();
 
-                    // TODO: measure heart rate
+                    // Measure heart rate
+                    showHeartRateMonitorActivity();
 
                 }//If no marker is already selected
                 else if(!marker.equals(selectedMarker)) {
@@ -678,16 +689,64 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-
         if (requestCode == 1) {
+            drawPath(selectedMarker);
             if(resultCode == Activity.RESULT_OK){
-                String firstHeartRate=data.getStringExtra("firstHeartRate");
-                // TODO: save firstHeartRate to DB
-                // TODO: start stepCounter
+                firstHeartRate = data.getStringExtra("firstHeartRate");
+                lastHeartRate = null;
+                startCounter();
+            }
+            if (resultCode == Activity.RESULT_CANCELED) {
+                //Write your code if there's no result
+            }
+        } else if (requestCode == 2) {
+            if(resultCode == Activity.RESULT_OK){
+                lastHeartRate = data.getStringExtra("lastHeartRate");
+
+                // TODO: save firstHeartRate, lastHeartRate and nSteps to DB
+
+                Intent nextIntent = new Intent(this, MainActivity.class);
+                startActivity(nextIntent);
             }
             if (resultCode == Activity.RESULT_CANCELED) {
                 //Write your code if there's no result
             }
         }
     }
+
+    protected void startCounter() {
+        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
+        sensorManager.registerListener(sensorEventListener, stepSensor, SensorManager.SENSOR_DELAY_FASTEST);
+
+        stepOffset = 0;
+    }
+
+    // TODO: call stopCounter when reach selectedMarker
+    protected void stopCounter() {
+        sensorManager.unregisterListener(sensorEventListener, stepSensor);
+
+        // measure heart rate after moving
+        if (lastHeartRate == null) {
+            Intent secondIntent = new Intent(this, HeartRateMonitorActivity.class);
+            secondIntent.putExtra("isLast", true);
+            startActivityForResult(secondIntent, 2);
+        }
+    }
+
+    public SensorEventListener sensorEventListener = new SensorEventListener() {
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+            if (stepOffset == 0) {
+                stepOffset = event.values[0];
+            }
+            nSteps = Float.toString(event.values[0] - stepOffset);
+            float fSteps = event.values[0] - stepOffset;
+            if (fSteps >= 20)
+                stopCounter();
+        }
+    };
 }

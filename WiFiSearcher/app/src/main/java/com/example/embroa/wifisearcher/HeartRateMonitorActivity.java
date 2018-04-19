@@ -24,7 +24,7 @@ public class HeartRateMonitorActivity extends Activity {
     private Sensor heartRateSensor;
     private TextView textView;
     private int timesChanged = 0;
-    private int heartRateValue = 0;
+    private String heartRateValue;
     private boolean isDone = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,21 +82,17 @@ public class HeartRateMonitorActivity extends Activity {
         Intent previousIntent = getIntent();
 
         Boolean isLast = previousIntent.getBooleanExtra("isLast", false);
+        Intent returnIntent = new Intent();
         if (isLast){
-            // Go back to main menu after last measure
-            // TODO: go back to previous activity to save value to DB
-            nextIntent = new Intent(this, MainActivity.class);
+            // Return last measure
+            returnIntent.putExtra("lastHeartRate",heartRateValue);
         } else {
-            // Go back to map activity after first measure
-            //nextIntent = new Intent(this, StepCounterActivity.class);
-
-            Intent returnIntent = new Intent();
+            // Return first measure
             returnIntent.putExtra("firstHeartRate",heartRateValue);
-            setResult(Activity.RESULT_OK,returnIntent);
-            finish();
         }
+        setResult(Activity.RESULT_OK,returnIntent);
+        finish();
 
-        /*MainActivity.this.*/startActivity(nextIntent);
     }
 
     public SensorEventListener sensorEventListener = new SensorEventListener() {
@@ -119,7 +115,7 @@ public class HeartRateMonitorActivity extends Activity {
                         timesChanged++;
 
                         if (timesChanged > 10) {
-                            heartRateValue = (int) heartRate;
+                            heartRateValue = Float.toString(heartRate);
                             isDone = true;
                             findViewById(R.id.okBtn).setVisibility(View.VISIBLE);
                         }

@@ -41,17 +41,4 @@
     android:text="Détails sur la connexion en cours"
     tools:clickable="false" />
 
-    <Button
-        android:id="@+id/showStepCounterBtn"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentStart="true"
-        android:layout_below="@+id/scanNumView"
-        android:layout_marginTop="300dp"
-        android:text="Let the adventure begin"
-        tools:clickable="false" />
-
 </RelativeLayout>
